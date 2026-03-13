@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
-import axiosClient from '../services/axiosClient';
+import problemService from '../services/problemService';
+import submissionService from '../services/submissionService';
 import Navbar from '../components/Navbar';
 import LeftPanel from '../components/problem/LeftPanel';
 import RightPanel from '../components/problem/RightPanel';
@@ -34,8 +35,7 @@ const ProblemPage = () => {
         const fetchProblem = async () => {
             setPageLoading(true);
             try {
-                const response = await axiosClient.get(`/problem/problemById/${problemId}`);
-                const data = response.data;
+                const data = await problemService.getProblemById(problemId);
                 setProblem(data);
 
                 const startCode = data.startCode?.find(sc => sc.language === selectedLanguage);
@@ -78,13 +78,13 @@ const ProblemPage = () => {
         setRunResult(null);
 
         try {
-            const response = await axiosClient.post(`/submission/run/${problemId}`, {
+            const data = await submissionService.runCode(problemId, {
                 code,
                 language: selectedLanguage,
                 input: customTestcases,
             });
 
-            setRunResult(response.data);
+            setRunResult(data);
             setActiveRightTab('test_result');
         } catch (error) {
             console.error('Error running code:', error);
@@ -111,12 +111,12 @@ const ProblemPage = () => {
         setSubmitResult(null);
 
         try {
-            const response = await axiosClient.post(`/submission/submit/${problemId}`, {
+            const data = await submissionService.submitCode(problemId, {
                 code,
                 language: selectedLanguage,
             });
 
-            setSubmitResult(response.data);
+            setSubmitResult(data);
             setActiveRightTab('submit_result');
         } catch (error) {
             console.error('Error submitting code:', error);
@@ -189,8 +189,10 @@ const ProblemPage = () => {
                 `}>
                     <LeftPanel
                         problem={problem}
+                        code={code}
                         problemId={problemId}
                         darkMode={darkMode}
+                        setSubmitResult={setSubmitResult}
                     />
                 </div>
 

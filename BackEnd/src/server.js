@@ -9,6 +9,7 @@ import cors from "cors"
 
 import main from "./config/db.js"
 import { redisClient } from "./config/redis.js";
+import AIRouter from "./routes/aiChatting.js";
 
 const app = express();
 app.use(cors({
@@ -25,6 +26,7 @@ app.use(cookieParser())
 app.use("/auth", authRouter)
 app.use("/problem", problemRouter)
 app.use("/submission",submitRouter);
+app.use('/ai',AIRouter);
 
 
 

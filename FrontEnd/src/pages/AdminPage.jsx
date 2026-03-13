@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router';
-import axiosClient from '../services/axiosClient';
+import problemService from '../services/problemService';
 import Navbar from '../components/Navbar';
 import AdminProblemList from '../components/admin/AdminProblemList';
 import AdminProblemForm from '../components/admin/AdminProblemForm';
@@ -41,9 +41,9 @@ const AdminPage = () => {
     const fetchProblems = async () => {
         setPageLoading(true);
         try {
-            const res = await axiosClient.get('/problem/getAllProblem');
-            if (Array.isArray(res.data)) {
-                setProblems(res.data);
+            const data = await problemService.getAllProblems();
+            if (Array.isArray(data)) {
+                setProblems(data);
             } else {
                 setProblems([]);
             }
@@ -74,8 +74,8 @@ const AdminPage = () => {
         setLoading(true);
 
         try {
-            const res = await axiosClient.get(`/problem/problemById/${id}`);
-            setFormData(res.data);
+            const data = await problemService.getProblemById(id);
+            setFormData(data);
             setMobileView('editor');
         } catch (err) {
             setError('Failed to load problem');
@@ -102,10 +102,10 @@ const AdminPage = () => {
 
         try {
             if (isEditMode && selectedId) {
-                await axiosClient.put(`/problem/update/${selectedId}`, formData);
+                await problemService.updateProblem(selectedId, formData);
                 setSuccess('Problem updated successfully!');
             } else {
-                await axiosClient.post('/problem/create', formData);
+                await problemService.createProblem(formData);
                 setSuccess('Problem created successfully!');
                 setFormData({ ...EMPTY_FORM });
             }
@@ -127,7 +127,7 @@ const AdminPage = () => {
         setError(null);
 
         try {
-            await axiosClient.delete(`/problem/delete/${selectedId}`);
+            await problemService.deleteProblem(selectedId);
             setSuccess('Problem deleted!');
             setSelectedId(null);
             setIsEditMode(false);

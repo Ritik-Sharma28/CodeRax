@@ -40,6 +40,14 @@ function Navbar({ darkMode, setDarkMode }) {
                                 : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
                             }`
                         }>
+                            Home
+                        </NavLink>
+                        <NavLink to="/problems" className={({ isActive }) =>
+                            `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
+                                ? (darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-700')
+                                : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
+                            }`
+                        }>
                             Problems
                         </NavLink>
                         {user?.role === 'admin' && (

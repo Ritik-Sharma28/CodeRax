@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { checkAuth } from './services/authSlice';
 import { Navigate, Route, Routes } from 'react-router';
-import Homepage from './pages/Homepage';
+import Home from './pages/Home';
+import Problems from './pages/Problems';
 import ProblemPage from './pages/ProblemPage';
 import AdminPage from './pages/AdminPage';
 import Login from './pages/Login';
@@ -29,7 +30,8 @@ function App() {
 
       <Routes>
 
-        <Route path="/" element={isAuthenticated ? <Homepage /> : <Navigate to="/login" />}></Route>
+        <Route path="/" element={isAuthenticated ? <Home /> : <Navigate to="/login" />}></Route>
+        <Route path="/problems" element={isAuthenticated ? <Problems /> : <Navigate to="/login" />}></Route>
         <Route path="/problem/:problemId" element={isAuthenticated ? <ProblemPage /> : <Navigate to="/login" />}></Route>
         <Route path="/admin" element={isAuthenticated ? <AdminPage /> : <Navigate to="/login" />}></Route>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />}></Route>

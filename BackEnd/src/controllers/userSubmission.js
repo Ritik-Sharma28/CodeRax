@@ -27,16 +27,18 @@ export const submitCode = async (req, res) => {
             testCases: allTestCases,
             problemSignature: problemSignature
         });
-
+        //console.log(result)
         const submittedResult = await Submission.create({
             userId,
             problemId,
             code,
             language,
+            memory : result.rawResponse.memory,
+            runtime : result.rawResponse.time ,
             status: result.verdict,
-            testCasesTotal: allTestCases.length,
+            testCasesTotal: result.details.totalCases,
             errorMessage: result.rawResponse?.error || null,
-            testCasePassed: result.details.testCasesPassed
+            testCasesPassed: result.details.testCasesPassed
 
         })
 
@@ -81,3 +83,22 @@ export const runCode = async (req, res) => {
     }
 }
 
+
+export const getSubmissions = async (req, res) => {
+    try {
+        const userId = req.result._id;
+        const problemId = req.params.id;
+
+        if (!userId || !problemId) {
+            return res.status(400).send("Missing userId or problemId");
+        }
+
+        const submissions = await Submission.find({ userId, problemId })
+            .sort({ createdAt: -1 })
+            .limit(20);
+
+        res.json(submissions);
+    } catch (err) {
+        res.status(500).send("Error fetching submissions: " + err.message);
+    }
+};

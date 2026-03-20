@@ -27,6 +27,7 @@ app.use("/auth", authRouter)
 app.use("/problem", problemRouter)
 app.use("/submission",submitRouter);
 app.use('/ai',AIRouter);
+app.use("/video" , videoRouter)
 
 
 

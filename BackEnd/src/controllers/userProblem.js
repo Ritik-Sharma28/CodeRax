@@ -133,10 +133,11 @@ export const getAllProblem = async (req, res) => {
             // Admin gets creator info + timestamps
             problems = await Problem.find({})
                 .select('_id title difficulty tags problemCreator createdAt updatedAt')
-                .populate('problemCreator', 'firstName emailId');
+                .populate('problemCreator', 'firstName emailId')
+                .lean();
         } else {
             // Regular user gets limited fields
-            problems = await Problem.find({}).select('_id title difficulty tags');
+            problems = await Problem.find({}).select('_id title difficulty tags').lean();
         }
 
         if (problems.length == 0)

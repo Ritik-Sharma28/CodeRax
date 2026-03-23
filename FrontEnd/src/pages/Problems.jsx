@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { NavLink } from 'react-router';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchAllProblems } from '../store/problemsSlice';
 import problemService from '../services/problemService';
 import Navbar from '../components/Navbar';
 
@@ -14,13 +15,20 @@ const getDifficultyStyle = (difficulty, darkMode) => {
 };
 
 function Problems() {
+    const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
-    const [problems, setProblems] = useState([]);
+    const { problemIndex, status } = useSelector((state) => state.problems);
+    
     const [solvedProblems, setSolvedProblems] = useState([]);
     const [activeTab, setActiveTab] = useState('all');
     const [search, setSearch] = useState('');
     const [difficultyFilter, setDifficultyFilter] = useState('all');
     const [tagFilter, setTagFilter] = useState('all');
+    
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
+    
     const [darkMode, setDarkMode] = useState(() => {
         return localStorage.getItem('darkMode') === 'true';
     });
@@ -30,15 +38,9 @@ function Problems() {
     }, [darkMode]);
 
     useEffect(() => {
-        const fetchProblems = async () => {
-            try {
-                const data = await problemService.getAllProblems();
-                setProblems(Array.isArray(data) ? data : []);
-            } catch (error) {
-                console.error('Error fetching problems:', error);
-                setProblems([]);
-            }
-        };
+        if (status === 'idle') {
+            dispatch(fetchAllProblems());
+        }
 
         const fetchSolvedProblems = async () => {
             try {
@@ -50,25 +52,34 @@ function Problems() {
             }
         };
 
-        const loadData = async () => {
-            await fetchProblems();
-            if (user) await fetchSolvedProblems();
-        };
+        if (user) {
+            fetchSolvedProblems();
+        }
+    }, [user, status, dispatch]);
 
-        loadData();
-    }, [user]);
+    const solvedIds = useMemo(() => new Set(solvedProblems.map(sp => sp._id)), [solvedProblems]);
 
-    const solvedIds = new Set(solvedProblems.map(sp => sp._id));
+    // Derived completely filtered array. Notice how search is fully local & instant.
+    const filteredProblems = useMemo(() => {
+        return problemIndex.filter(problem => {
+            if (activeTab === 'solved' && !solvedIds.has(problem._id)) return false;
+            if (difficultyFilter !== 'all' && problem.difficulty !== difficultyFilter) return false;
+            if (tagFilter !== 'all' && problem.tags !== tagFilter) return false;
+            if (search.trim() && !problem.title.toLowerCase().includes(search.trim().toLowerCase())) return false;
+            return true;
+        });
+    }, [problemIndex, activeTab, solvedIds, difficultyFilter, tagFilter, search]);
 
-    const filteredProblems = problems.filter(problem => {
-        if (activeTab === 'solved' && !solvedIds.has(problem._id)) return false;
-        if (difficultyFilter !== 'all' && problem.difficulty !== difficultyFilter) return false;
-        if (tagFilter !== 'all' && problem.tags !== tagFilter) return false;
-        if (search.trim() && !problem.title.toLowerCase().includes(search.trim().toLowerCase())) return false;
-        return true;
-    });
+    // Reset page index if any filter is modified
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, difficultyFilter, tagFilter, search]);
 
-    const solvedCount = problems.filter(p => solvedIds.has(p._id)).length;
+    const solvedCount = problemIndex.filter(p => solvedIds.has(p._id)).length;
+    
+    // Compute purely paginated slice
+    const totalPages = Math.ceil(filteredProblems.length / ITEMS_PER_PAGE);
+    const paginatedProblems = filteredProblems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     return (
         <div className={`min-h-screen transition-colors duration-300 flex flex-col ${darkMode ? 'bg-slate-950' : 'bg-gradient-to-br from-slate-50 via-white to-indigo-50/30'}`}>
@@ -85,7 +96,7 @@ function Problems() {
                 {/* Tabs Row */}
                 <div className="flex items-center gap-2 flex-wrap mb-4 animate-in slide-in-from-bottom-2 fade-in duration-500">
                     {[
-                        { key: 'all', label: 'All Problems', count: problems.length },
+                        { key: 'all', label: 'All Problems', count: problemIndex.length },
                         { key: 'solved', label: 'Solved', count: solvedCount },
                     ].map(tab => (
                         <button
@@ -189,7 +200,12 @@ function Problems() {
                     </div>
 
                     {/* Rows */}
-                    {filteredProblems.length === 0 ? (
+                    {status === 'loading' ? (
+                        <div className="px-6 py-20 text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
+                            <p className={`mt-4 text-sm font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Loading problems...</p>
+                        </div>
+                    ) : paginatedProblems.length === 0 ? (
                         <div className="px-6 py-20 text-center">
                             <svg className={`w-14 h-14 mx-auto mb-5 ${darkMode ? 'text-slate-700' : 'text-slate-300'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -199,7 +215,9 @@ function Problems() {
                             <p className={`text-sm ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Try adjusting your filters or search terms.</p>
                         </div>
                     ) : (
-                        filteredProblems.map((problem, idx) => {
+                        paginatedProblems.map((problem) => {
+                            // Find absolute index to maintain global numbering (optional, currently not used globally but useful for numbering)
+                            const absoluteIndex = problemIndex.findIndex(p => p._id === problem._id);
                             const diffStyle = getDifficultyStyle(problem.difficulty, darkMode);
                             const isSolved = solvedIds.has(problem._id);
 
@@ -207,17 +225,13 @@ function Problems() {
                                 <NavLink
                                     key={problem._id}
                                     to={`/problem/${problem._id}`}
-                                    className={`block sm:grid sm:grid-cols-[minmax(0,1fr)_100px_100px_80px] gap-4 px-5 sm:px-6 py-4 items-center transition-colors cursor-pointer group
-                                        ${idx !== filteredProblems.length - 1
-                                            ? (darkMode ? 'border-b border-slate-800' : 'border-b border-slate-100')
-                                            : ''
-                                        }
-                                        ${darkMode ? 'hover:bg-slate-800/60' : 'hover:bg-indigo-50/40'}`}
+                                    className={`block sm:grid sm:grid-cols-[minmax(0,1fr)_100px_100px_80px] gap-4 px-5 sm:px-6 py-4 items-center transition-colors cursor-pointer group border-b
+                                        ${darkMode ? 'border-slate-800 hover:bg-slate-800/60' : 'border-slate-100 hover:bg-indigo-50/40'}`}
                                 >
                                     {/* Title */}
                                     <div className="flex items-center gap-3 mb-2 sm:mb-0 min-w-0">
                                         <span className={`text-xs font-bold w-6 text-right hidden sm:block flex-shrink-0 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>
-                                            {idx + 1}.
+                                            {absoluteIndex + 1}.
                                         </span>
                                         <h3 className={`text-sm font-semibold transition-colors truncate
                                             ${darkMode
@@ -258,6 +272,37 @@ function Problems() {
                                 </NavLink>
                             );
                         })
+                    )}
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className={`flex items-center justify-between px-6 py-4 border-t ${darkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-white'}`}>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                                    currentPage === 1 
+                                        ? (darkMode ? 'bg-slate-800 text-slate-600' : 'bg-slate-100 text-slate-400')
+                                        : (darkMode ? 'bg-slate-800 hover:bg-slate-700 text-white' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700')
+                                }`}
+                            >
+                                Previous
+                            </button>
+                            <span className={`text-xs font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                Page {currentPage} of {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                disabled={currentPage === totalPages}
+                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                                    currentPage === totalPages 
+                                        ? (darkMode ? 'bg-slate-800 text-slate-600' : 'bg-slate-100 text-slate-400')
+                                        : (darkMode ? 'bg-slate-800 hover:bg-slate-700 text-white' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700')
+                                }`}
+                            >
+                                Next
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>

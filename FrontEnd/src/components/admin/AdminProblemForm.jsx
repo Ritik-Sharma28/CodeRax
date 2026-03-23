@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
+import problemService from '../../services/problemService';
 
 const TABS = [
     { key: 'details', label: 'Details', icon: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z' },
     { key: 'signature', label: 'Signature', icon: 'M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l5.653-4.655m3.172 3.172l5.653-4.655a2.548 2.548 0 00-3.586-3.586l-4.655 5.653m3.172 3.172L11.42 15.17' },
     { key: 'testcases', label: 'Test Cases', icon: 'M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z' },
     { key: 'code', label: 'Code', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' },
+    { key: 'video', label: 'Video', icon: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' },
 ];
 
 const EMPTY_FORM = {
@@ -22,6 +24,11 @@ const EMPTY_FORM = {
 
 function AdminProblemForm({ formData, setFormData, isEditMode, onSubmit, onDelete, loading, error, success, darkMode }) {
     const [activeTab, setActiveTab] = useState('details');
+    const [videoFile, setVideoFile] = useState(null);
+    const [uploadingVideo, setUploadingVideo] = useState(false);
+    const [videoError, setVideoError] = useState('');
+    const [videoSuccess, setVideoSuccess] = useState('');
+
     const data = formData || EMPTY_FORM;
 
     const updateField = (field, value) => {
@@ -352,6 +359,119 @@ function AdminProblemForm({ formData, setFormData, isEditMode, onSubmit, onDelet
                                 </div>
                             ))}
                         </div>
+                    </div>
+                )}
+                {/* ===== VIDEO TAB ===== */}
+                {activeTab === 'video' && (
+                    <div className="space-y-6 max-w-2xl">
+                        {!isEditMode || !data._id ? (
+                            <div className="p-6 text-center border-dashed border-2 rounded-xl border-slate-300 dark:border-slate-700">
+                                <p className={`text-sm font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                    You must create and save the problem first before uploading a solution video.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className={cardClass}>
+                                <div className="mb-4">
+                                    <label className={labelClass}>Upload Solution Video</label>
+                                    <p className={`text-xs mb-3 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                                        Select an MP4 video explaining the solution. We will automatically generate thumbnails and multiple resolutions.
+                                    </p>
+                                    <input 
+                                        type="file" 
+                                        accept="video/*"
+                                        onChange={(e) => setVideoFile(e.target.files[0])}
+                                        className={`block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold 
+                                            ${darkMode 
+                                                ? 'text-slate-300 file:bg-indigo-500/20 file:text-indigo-400 hover:file:bg-indigo-500/30' 
+                                                : 'text-slate-600 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100'}`}
+                                    />
+                                </div>
+                                
+                                {videoError && <p className="text-xs text-red-500 mb-2">{videoError}</p>}
+                                {videoSuccess && <p className="text-xs text-emerald-500 mb-2">{videoSuccess}</p>}
+
+                                <div className="flex gap-3">
+                                    <button 
+                                        disabled={!videoFile || uploadingVideo}
+                                        onClick={async () => {
+                                            if(!videoFile) return;
+                                            try {
+                                                setUploadingVideo(true);
+                                                setVideoError('');
+                                                setVideoSuccess('');
+
+                                                // 1. Get auth signature
+                                                const sigData = await problemService.generateUploadSignature(data._id);
+                                                
+                                                // 2. Upload directly to Cloudinary
+                                                const formData = new FormData();
+                                                formData.append('file', videoFile);
+                                                formData.append('api_key', sigData.api_key);
+                                                formData.append('timestamp', sigData.timestamp);
+                                                formData.append('signature', sigData.signature);
+                                                formData.append('public_id', sigData.public_id);
+                                                if (sigData.eager) formData.append('eager', sigData.eager);
+                                                if (sigData.eager_async) formData.append('eager_async', sigData.eager_async);
+
+                                                const uploadRes = await fetch(sigData.upload_url, {
+                                                    method: 'POST',
+                                                    body: formData
+                                                });
+                                                
+                                                const cloudinaryResult = await uploadRes.json();
+                                                if(cloudinaryResult.error) throw new Error(cloudinaryResult.error.message);
+
+                                                // 3. Fallback database save (since webhook might fail locally)
+                                                await problemService.saveVideoLocalFallback({
+                                                    problemId: data._id,
+                                                    secureUrl: cloudinaryResult.secure_url,
+                                                    duration: cloudinaryResult.duration,
+                                                    publicId: cloudinaryResult.public_id,
+                                                });
+
+                                                setVideoSuccess('Video uploaded and saved successfully!');
+                                                setVideoFile(null);
+                                            } catch(err) {
+                                                setVideoError(err.message || 'Error uploading video');
+                                            } finally {
+                                                setUploadingVideo(false);
+                                            }
+                                        }}
+                                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200
+                                            ${uploadingVideo || !videoFile
+                                                ? 'bg-slate-500/50 cursor-not-allowed text-white/70'
+                                                : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md'
+                                            }`}
+                                    >
+                                        {uploadingVideo ? 'Uploading...' : 'Upload Video'}
+                                    </button>
+
+                                    <button
+                                        disabled={uploadingVideo}
+                                        onClick={async () => {
+                                            if(!window.confirm("Delete existing solution video?")) return;
+                                            try {
+                                                setUploadingVideo(true);
+                                                await problemService.deleteVideo(data._id);
+                                                setVideoSuccess("Video deleted from server");
+                                                setVideoError('');
+                                            } catch(err) {
+                                                setVideoError(err.message || "Error deleting video");
+                                            } finally {
+                                                setUploadingVideo(false);
+                                            }
+                                        }}
+                                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors
+                                            ${darkMode 
+                                                ? 'bg-slate-800 text-red-500 hover:bg-slate-700' 
+                                                : 'bg-slate-100 text-red-600 hover:bg-slate-200'}`}
+                                    >
+                                        Delete Current Video
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

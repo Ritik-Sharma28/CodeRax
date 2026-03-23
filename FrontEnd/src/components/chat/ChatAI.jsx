@@ -172,14 +172,98 @@ function SuggestionChips({ suggestions, onSelect, darkMode }) {
     );
 }
 
-function ChatMessage({ message, darkMode }) {
+// ─── Pin Button on Assistant Messages ─────────────────────────────────────────
+function PinButton({ isPinned, onToggle, darkMode }) {
+    return (
+        <button
+            onClick={onToggle}
+            title={isPinned ? 'Unpin message' : 'Pin for revision'}
+            className={`p-1 rounded-md transition-all duration-200 ${
+                isPinned
+                    ? (darkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-50 text-amber-600')
+                    : (darkMode ? 'text-slate-600 hover:text-amber-400 hover:bg-slate-700/50' : 'text-slate-300 hover:text-amber-500 hover:bg-amber-50')
+            }`}
+        >
+            <svg className="w-3.5 h-3.5" fill={isPinned ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+            </svg>
+        </button>
+    );
+}
+
+// ─── Save Memory Modal ────────────────────────────────────────────────────────
+function SaveMemoryModal({ pinnedCount, onSave, onCancel, darkMode, saving }) {
+    const [userNote, setUserNote] = useState('');
+    const [tagsInput, setTagsInput] = useState('');
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
+        onSave(userNote, tags);
+    };
+
+    return (
+        <div className={`mx-4 mb-3 p-4 rounded-2xl border ${darkMode ? 'bg-slate-800/90 border-slate-700/60' : 'bg-white/95 border-slate-200 shadow-lg'}`}>
+            <div className="flex items-center gap-2 mb-3">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${darkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h4 className={`text-sm font-bold ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>Save to Revision Notes</h4>
+                    <p className={`text-[10px] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{pinnedCount} message{pinnedCount > 1 ? 's' : ''} pinned</p>
+                </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-2.5">
+                <div>
+                    <input
+                        type="text"
+                        value={userNote}
+                        onChange={(e) => setUserNote(e.target.value)}
+                        placeholder='e.g. "Forgot the base case for recursion"'
+                        className={`w-full px-3 py-2 rounded-xl text-xs border outline-none transition-all ${darkMode ? 'bg-slate-900/80 border-slate-700/60 text-slate-200 placeholder:text-slate-600 focus:border-amber-500/50' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-amber-400'}`}
+                    />
+                </div>
+                <div>
+                    <input
+                        type="text"
+                        value={tagsInput}
+                        onChange={(e) => setTagsInput(e.target.value)}
+                        placeholder="Tags (comma separated): dp, recursion, trees"
+                        className={`w-full px-3 py-2 rounded-xl text-xs border outline-none transition-all ${darkMode ? 'bg-slate-900/80 border-slate-700/60 text-slate-200 placeholder:text-slate-600 focus:border-amber-500/50' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-amber-400'}`}
+                    />
+                </div>
+                <div className="flex gap-2 pt-1">
+                    <button
+                        type="submit"
+                        disabled={saving}
+                        className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold transition-all ${saving ? 'opacity-50 cursor-not-allowed' : ''} ${darkMode ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' : 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm'}`}
+                    >
+                        {saving ? 'Saving...' : '📌 Save Note'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${darkMode ? 'text-slate-500 hover:text-slate-300 hover:bg-slate-700/50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+}
+
+function ChatMessage({ message, darkMode, isPinned, onTogglePin, showPin }) {
     const isUser = message.role === 'user';
     const isSystem = message.role === 'system';
 
     if (isSystem) return null;
 
     return (
-        <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} group`}>
             <div className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black ${isUser ? (darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600') : (darkMode ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white' : 'bg-gradient-to-br from-violet-500 to-indigo-500 text-white')}`}>
                 {isUser ? (
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -189,11 +273,19 @@ function ChatMessage({ message, darkMode }) {
             </div>
 
             <div className={`max-w-[85%] min-w-0 ${isUser ? 'items-end' : 'items-start'}`}>
-                <div className={`px-4 py-3 rounded-2xl ${isUser ? (darkMode ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-indigo-500 text-white rounded-tr-sm') : (darkMode ? 'bg-slate-800 border border-slate-700/60 rounded-tl-sm' : 'bg-white border border-slate-200 shadow-sm rounded-tl-sm')}`}>
-                    {isUser ? (
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                    ) : (
-                        <div className="min-w-0 overflow-hidden">{renderMarkdown(message.content, darkMode)}</div>
+                <div className="relative">
+                    <div className={`px-4 py-3 rounded-2xl ${isUser ? (darkMode ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-indigo-500 text-white rounded-tr-sm') : (darkMode ? 'bg-slate-800 border border-slate-700/60 rounded-tl-sm' : 'bg-white border border-slate-200 shadow-sm rounded-tl-sm')}`}>
+                        {isUser ? (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                        ) : (
+                            <div className="min-w-0 overflow-hidden">{renderMarkdown(message.content, darkMode)}</div>
+                        )}
+                    </div>
+                    {/* Pin button — only on assistant messages */}
+                    {showPin && !isUser && (
+                        <div className={`absolute -top-1 -right-1 transition-opacity duration-200 ${isPinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                            <PinButton isPinned={isPinned} onToggle={onTogglePin} darkMode={darkMode} />
+                        </div>
                     )}
                 </div>
                 {message.timestamp && (
@@ -216,6 +308,12 @@ function ChatAI({ problemId, code, darkMode }) {
     const [error, setError] = useState(null);
     const [contextAttached, setContextAttached] = useState(true);
 
+    // Pin / Save state
+    const [pinnedIndices, setPinnedIndices] = useState(new Set());
+    const [showSaveModal, setShowSaveModal] = useState(false);
+    const [savingMemory, setSavingMemory] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(null);
+
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
     const abortControllerRef = useRef(null);
@@ -225,18 +323,61 @@ function ChatAI({ problemId, code, darkMode }) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isLoading]);
 
+    // Toggle pin on a message (max 5)
+    const togglePin = (idx) => {
+        setPinnedIndices(prev => {
+            const next = new Set(prev);
+            if (next.has(idx)) {
+                next.delete(idx);
+            } else {
+                if (next.size >= 5) return prev; // max 5
+                next.add(idx);
+            }
+            return next;
+        });
+    };
+
+    // Save pinned messages as a revision memory
+    const handleSaveMemory = async (userNote, tags) => {
+        setSavingMemory(true);
+        setSaveSuccess(null);
+
+        const selectedMessages = [...pinnedIndices]
+            .sort((a, b) => a - b)
+            .map(idx => ({
+                role: messages[idx].role,
+                content: messages[idx].content,
+            }));
+
+        try {
+            await axiosClient.post('/ai/memory', {
+                selectedMessages,
+                userNote,
+                problemId,
+                tags,
+            });
+
+            setSaveSuccess('✅ Saved to revision notes!');
+            setPinnedIndices(new Set());
+            setShowSaveModal(false);
+            setTimeout(() => setSaveSuccess(null), 3000);
+        } catch (err) {
+            if (err.response?.status === 429) {
+                setError("Whoa, slow down! I'm thinking about too many things at once. Give me 10 seconds and ask again.");
+            } else {
+                setError(err.response?.data?.error || 'Failed to save memory.');
+            }
+        } finally {
+            setSavingMemory(false);
+        }
+    };
+
     // ──────────────────────────────────────────────────────────────────────────
     //  API CALL — sends chat history + context to backend
-    //  Backend handles: system prompt building, OpenAI call, response
     // ──────────────────────────────────────────────────────────────────────────
     const sendMessageToAI = async (userMessage) => {
-        // Create an AbortController so user can cancel mid-request
         abortControllerRef.current = new AbortController();
 
-        // Build the payload:
-        //   messages  → chat history in OpenAI format (role + content only)
-        //   userMessage → the latest user message (string)
-        //   problemContext → problem info + current code for the backend to build system prompt
         const payload = {
             messages: messages
                 .filter((m) => m.role !== 'system')
@@ -248,7 +389,6 @@ function ChatAI({ problemId, code, darkMode }) {
             },
         };
 
-        // POST to backend — backend returns { reply: "assistant message text" }
         const response = await axiosClient.post('/ai/chat', payload, {
             signal: abortControllerRef.current.signal,
         });
@@ -266,22 +406,16 @@ function ChatAI({ problemId, code, darkMode }) {
         setInput('');
         setError(null);
 
-        // 1. Add user message to chat
         const userMsg = {
             role: 'user',
             content: userMessage,
             timestamp: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, userMsg]);
-
-        // 2. Show loading state
         setIsLoading(true);
 
         try {
-            // 3. Call backend
             const data = await sendMessageToAI(userMessage);
-
-            // 4. Add assistant reply to chat
             const assistantMsg = {
                 role: 'assistant',
                 content: data.reply,
@@ -289,22 +423,24 @@ function ChatAI({ problemId, code, darkMode }) {
             };
             setMessages((prev) => [...prev, assistantMsg]);
         } catch (err) {
-            // Ignore abort errors (user clicked stop)
             if (err.name === 'AbortError' || err.code === 'ERR_CANCELED') return;
 
             console.error('Chat error:', err);
-            setError(
-                err.response?.data?.error ||
-                err.response?.data?.message ||
-                'Failed to get response. Please try again.'
-            );
+            if (err.response?.status === 429) {
+                setError("Whoa, slow down! I'm thinking about too many things at once. Give me 10 seconds and ask again.");
+            } else {
+                setError(
+                    err.response?.data?.error ||
+                    err.response?.data?.message ||
+                    'Failed to get response. Please try again.'
+                );
+            }
         } finally {
             setIsLoading(false);
             abortControllerRef.current = null;
         }
     };
 
-    // Cancel in-flight request
     const handleStop = () => {
         abortControllerRef.current?.abort();
         setIsLoading(false);
@@ -313,6 +449,8 @@ function ChatAI({ problemId, code, darkMode }) {
     const handleClearChat = () => {
         setMessages([]);
         setError(null);
+        setPinnedIndices(new Set());
+        setShowSaveModal(false);
     };
 
     const handleKeyDown = (e) => {
@@ -340,7 +478,7 @@ function ChatAI({ problemId, code, darkMode }) {
             </div>
             <h3 className={`text-base font-black mb-1.5 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>AI Assistant</h3>
             <p className={`text-xs text-center mb-6 max-w-[260px] leading-relaxed ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                Ask about your code, get hints, debug errors, or explore different approaches
+                Ask about your code, get hints, debug errors, or explore different approaches. Pin helpful answers to save them for revision!
             </p>
 
             {( code) && (
@@ -377,6 +515,19 @@ function ChatAI({ problemId, code, darkMode }) {
                 </div>
 
                 <div className="flex items-center gap-1.5">
+                    {/* Pin count & save button */}
+                    {pinnedIndices.size > 0 && (
+                        <button
+                            onClick={() => setShowSaveModal(true)}
+                            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${darkMode ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
+                        >
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                            </svg>
+                            {pinnedIndices.size}/5 Save
+                        </button>
+                    )}
+
                     <button
                         onClick={() => setContextAttached(!contextAttached)}
                         title={contextAttached ? 'Code context attached' : 'Code context detached'}
@@ -408,7 +559,14 @@ function ChatAI({ problemId, code, darkMode }) {
                 ) : (
                     <div className="flex flex-col gap-4 p-4">
                         {messages.map((msg, idx) => (
-                            <ChatMessage key={idx} message={msg} darkMode={darkMode} />
+                            <ChatMessage
+                                key={idx}
+                                message={msg}
+                                darkMode={darkMode}
+                                isPinned={pinnedIndices.has(idx)}
+                                onTogglePin={() => togglePin(idx)}
+                                showPin={true}
+                            />
                         ))}
 
                         {/* Typing indicator while waiting for backend */}
@@ -429,6 +587,14 @@ function ChatAI({ problemId, code, darkMode }) {
                 )}
             </div>
 
+            {/* ─── Success toast ─────────────────────────────────────── */}
+            {saveSuccess && (
+                <div className={`mx-4 mb-2 px-3 py-2 rounded-xl flex items-center gap-2 text-xs font-semibold ${darkMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}`}>
+                    <span className="flex-1">{saveSuccess}</span>
+                    <button onClick={() => setSaveSuccess(null)} className="hover:opacity-70">✕</button>
+                </div>
+            )}
+
             {/* ─── Error banner ────────────────────────────────────────── */}
             {error && (
                 <div className={`mx-4 mb-2 px-3 py-2 rounded-xl flex items-center gap-2 text-xs font-semibold ${darkMode ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-red-50 text-red-600 border border-red-200'}`}>
@@ -438,6 +604,17 @@ function ChatAI({ problemId, code, darkMode }) {
                     <span className="flex-1">{error}</span>
                     <button onClick={() => setError(null)} className="hover:opacity-70">✕</button>
                 </div>
+            )}
+
+            {/* ─── Save memory modal ──────────────────────────────────── */}
+            {showSaveModal && pinnedIndices.size > 0 && (
+                <SaveMemoryModal
+                    pinnedCount={pinnedIndices.size}
+                    onSave={handleSaveMemory}
+                    onCancel={() => setShowSaveModal(false)}
+                    darkMode={darkMode}
+                    saving={savingMemory}
+                />
             )}
 
             {/* ─── Quick follow-ups ───────────────────────────────────── */}

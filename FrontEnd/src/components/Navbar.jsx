@@ -50,6 +50,22 @@ function Navbar({ darkMode, setDarkMode }) {
                         }>
                             Problems
                         </NavLink>
+                        <NavLink to="/revision-mentor" className={({ isActive }) =>
+                            `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
+                                ? (darkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-700')
+                                : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
+                            }`
+                        }>
+                            Revision AI
+                        </NavLink>
+                        <NavLink to="/battle-lobby" className={({ isActive }) =>
+                            `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
+                                ? (darkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-50 text-purple-700')
+                                : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
+                            }`
+                        }>
+                            DSA Arena
+                        </NavLink>
                         {user?.role === 'admin' && (
                             <NavLink to="/admin" className={({ isActive }) =>
                                 `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
@@ -115,6 +131,40 @@ function Navbar({ darkMode, setDarkMode }) {
                                             <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{user?.firstName}</p>
                                             <p className={`text-xs mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{user?.emailId}</p>
                                         </div>
+                                        
+                                        {/* Profile link (Visible on both desktop & mobile in dropdown) */}
+                                        <NavLink to="/profile" onClick={() => setProfileOpen(false)}
+                                            className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
+                                            <svg className={`w-4 h-4 ${darkMode ? 'text-blue-400' : 'text-blue-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                            </svg>
+                                            My Profile
+                                        </NavLink>
+
+                                        {/* Mobile Only Nav Links */}
+                                        <NavLink to="/battle-lobby" onClick={() => setProfileOpen(false)}
+                                            className={`flex md:hidden items-center gap-3 px-4 py-2.5 text-sm transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
+                                            <svg className={`w-4 h-4 ${darkMode ? 'text-purple-400' : 'text-purple-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                            </svg>
+                                            DSA Arena
+                                        </NavLink>
+
+                                        <NavLink to="/problems" onClick={() => setProfileOpen(false)}
+                                            className={`flex md:hidden items-center gap-3 px-4 py-2.5 text-sm transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
+                                            <svg className={`w-4 h-4 ${darkMode ? 'text-indigo-400' : 'text-indigo-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                            </svg>
+                                            Problems
+                                        </NavLink>
+                                        <NavLink to="/revision-mentor" onClick={() => setProfileOpen(false)}
+                                            className={`flex md:hidden items-center gap-3 px-4 py-2.5 text-sm transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
+                                            <svg className={`w-4 h-4 ${darkMode ? 'text-emerald-400' : 'text-emerald-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.62 48.62 0 0112 20.904a48.62 48.62 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.636 50.636 0 00-2.658-.813A59.906 59.906 0 0112 3.493a59.903 59.903 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
+                                            </svg>
+                                            Revision AI
+                                        </NavLink>
+
                                         {user?.role === 'admin' && (
                                             <NavLink to="/admin" onClick={() => setProfileOpen(false)}
                                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm md:hidden
@@ -127,7 +177,7 @@ function Navbar({ darkMode, setDarkMode }) {
                                             </NavLink>
                                         )}
                                         <button onClick={handleLogout}
-                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors border-t border-slate-200 dark:border-slate-700">
                                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                             </svg>

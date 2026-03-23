@@ -2,6 +2,7 @@ import Problem from "../models/problem.js";
 import { runJudge } from "../judge1/submission.js";
 import { Submission } from "../models/submission.js";
 import { runTest } from "../judge1/run.js";
+import Match from "../models/match.js";
 
 export const submitCode = async (req, res) => {
     try {
@@ -33,14 +34,72 @@ export const submitCode = async (req, res) => {
             problemId,
             code,
             language,
-            memory : result.rawResponse.memory,
-            runtime : result.rawResponse.time ,
+            memory : result.rawResponse?.memory,
+            runtime : result.rawResponse?.time ,
             status: result.verdict,
-            testCasesTotal: result.details.totalCases,
+            testCasesTotal: result.details?.totalCases || 0,
             errorMessage: result.rawResponse?.error || null,
-            testCasesPassed: result.details.testCasesPassed
+            testCasesPassed: result.details?.testCasesPassed || 0
 
-        })
+        });
+
+        // --- BATTLE ENGINE LOGIC ---
+        try {
+            const match = await Match.findOne({
+                "participants.userId": userId,
+                status: "Ongoing"
+            }).populate("participants.userId", "firstName lastName profilePicture rating rank");
+
+            if (match) {
+                const participant = match.participants.find(p => p.userId._id.toString() === userId.toString());
+                const problemStat = participant?.problemStats.find(p => p.problemId.toString() === problemId.toString());
+
+                if (participant && problemStat && !problemStat.solved) {
+                    if (result.verdict === 'Accepted') {
+                        problemStat.solved = true;
+                        
+                        // Calculate time: duration from match.updatedAt when status went Ongoing
+                        const startTime = match.startTime || match.updatedAt;
+                        const timeTakenMinutes = Math.max(0, Math.floor((new Date() - new Date(startTime)) / 60000));
+                        problemStat.timeTakenMinutes = timeTakenMinutes;
+                        
+                        // ICPC Penalty: actual time + (failedAttempts * 20 min)
+                        const penalty = problemStat.failedAttempts * 20;
+                        participant.totalTimeMinutes += (timeTakenMinutes + penalty);
+                        participant.totalScore += 1;
+                        
+                        await match.save();
+                        
+                        // Check win condition
+                        const allSolved = participant.problemStats.every(ps => ps.solved);
+                        if (allSolved && match.type === 'Ranked') {
+                            match.status = 'Completed';
+                            match.endTime = new Date();
+                            await match.save();
+                            
+                            if (req.io) {
+                                req.io.to(match.matchId).emit('gameEnded', { 
+                                    participants: match.participants, 
+                                    winner: userId 
+                                });
+                            }
+                        } else {
+                            // Emit Live Leaderboard update if game hasn't ended
+                            if (req.io) {
+                                req.io.to(match.matchId).emit("leaderboardUpdate", { participants: match.participants });
+                            }
+                        }
+                    } else {
+                        // Wrong answer, TLE, RE, etc.
+                        problemStat.failedAttempts += 1;
+                        await match.save();
+                    }
+                }
+            }
+        } catch (matchErr) {
+            console.error("Match stats update failed:", matchErr);
+        }
+        // ---------------------------
 
         res.send(result)
 

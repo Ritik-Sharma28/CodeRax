@@ -29,6 +29,27 @@ const problemService = {
     deleteProblem: async (id) => {
         const response = await axiosClient.delete(`/problem/delete/${id}`);
         return response.data;
+    },
+
+    // Video Capabilities
+    generateUploadSignature: async (problemId) => {
+        const response = await axiosClient.get(`/video/create/${problemId}`);
+        return response.data;
+    },
+
+    saveVideoLocalFallback: async (videoData) => {
+        const response = await axiosClient.post('/video/save-local', videoData);
+        return response.data;
+    },
+
+    getVideoData: async (problemId) => {
+        const response = await axiosClient.get(`/video/${problemId}`);
+        return response.data;
+    },
+
+    deleteVideo: async (problemId) => {
+        const response = await axiosClient.delete(`/video/delete/${problemId}`);
+        return response.data;
     }
 };
 

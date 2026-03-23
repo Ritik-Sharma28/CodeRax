@@ -216,6 +216,7 @@ const ProblemPage = () => {
                         darkMode={darkMode}
                         activeRightTab={activeRightTab}
                         setActiveRightTab={setActiveRightTab}
+                        problemId={problem?._id}
                     />
                 </div>
             </div>

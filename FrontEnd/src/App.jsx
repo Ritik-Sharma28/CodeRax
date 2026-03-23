@@ -8,6 +8,11 @@ import ProblemPage from './pages/ProblemPage';
 import AdminPage from './pages/AdminPage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import RevisionMentorPage from './pages/RevisionMentorPage';
+import ProfilePage from './pages/ProfilePage';
+import BattleLobby from './pages/BattleLobby';
+import BattleArena from './pages/BattleArena';
+import BattleResults from './pages/BattleResults';
 
 function App() {
 
@@ -33,7 +38,12 @@ function App() {
         <Route path="/" element={isAuthenticated ? <Home /> : <Navigate to="/login" />}></Route>
         <Route path="/problems" element={isAuthenticated ? <Problems /> : <Navigate to="/login" />}></Route>
         <Route path="/problem/:problemId" element={isAuthenticated ? <ProblemPage /> : <Navigate to="/login" />}></Route>
+        <Route path="/revision-mentor" element={isAuthenticated ? <RevisionMentorPage /> : <Navigate to="/login" />}></Route>
         <Route path="/admin" element={isAuthenticated ? <AdminPage /> : <Navigate to="/login" />}></Route>
+        <Route path="/profile" element={isAuthenticated ? <ProfilePage /> : <Navigate to="/login" />}></Route>
+        <Route path="/battle-lobby" element={isAuthenticated ? <BattleLobby /> : <Navigate to="/login" />}></Route>
+        <Route path="/battle/:matchId" element={isAuthenticated ? <BattleArena /> : <Navigate to="/login" />}></Route>
+        <Route path="/battle-results/:matchId" element={isAuthenticated ? <BattleResults /> : <Navigate to="/login" />}></Route>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />}></Route>
         <Route path="/signup" element={isAuthenticated ? <Navigate to="/" /> : <Signup />}></Route>
 

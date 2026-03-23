@@ -34,6 +34,26 @@ const userSchema = new Schema({
     problemSolved: {
 
     },
+    profilePicture: {
+        type: String,
+        default: ""
+    },
+    rating: {
+        type: Number,
+        default: 1200
+    },
+    matchesPlayed: {
+        type: Number,
+        default: 0
+    },
+    matchesWon: {
+        type: Number,
+        default: 0
+    },
+    rank: {
+        type: String,
+        default: "Bronze"
+    },
     password: {
         type: String,
         required: true

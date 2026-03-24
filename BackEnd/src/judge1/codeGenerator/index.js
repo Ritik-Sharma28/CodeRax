@@ -1,6 +1,7 @@
 
 import { generateCppCode } from "./cpp.generator.js";
 import { generatePythonCode } from "./python.generator.js";
+import { generateJavaCode } from "./java.generator.js";
 
 export const generateCode = (language, userCode, problemSignature) => {
     switch (language.toLowerCase()) {
@@ -10,7 +11,10 @@ export const generateCode = (language, userCode, problemSignature) => {
         case 'python':
         case 'python3':
             return generatePythonCode(userCode, problemSignature);
+        case 'java':
+            return generateJavaCode(userCode, problemSignature);
         default:
             return null;
     }
 }
+

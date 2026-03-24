@@ -10,12 +10,13 @@ export const createProblem = async (req, res) => {
 
         const { title, description, difficulty, tags, visibleTestCases
             , hiddenTestCases, startCode, referenceSolution, problemCreator
-            , problemSignature } = req.body
+            , problemSignature, judgeConfig } = req.body
 
         if (!problemSignature) {
             return res.status(400).send("Problem Signature is required");
         }
-
+        console.log(problemSignature)
+        console.log( visibleTestCases , hiddenTestCases)
         for (const { language, completeCode } of referenceSolution) {
 
             const allTestCases = [...visibleTestCases, ...hiddenTestCases];
@@ -24,8 +25,10 @@ export const createProblem = async (req, res) => {
                 language,
                 code: completeCode,
                 testCases: allTestCases,
-                problemSignature: problemSignature
+                problemSignature: problemSignature,
+                judgeConfig
             });
+            console.log( result)
 
             if (!result.passed) {
                 return res.status(400).json({

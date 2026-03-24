@@ -3,13 +3,14 @@ import { runJudge } from "../judge1/submission.js";
 import { Submission } from "../models/submission.js";
 import { runTest } from "../judge1/run.js";
 import Match from "../models/match.js";
+import { buildLeaderboard, shouldAutoCompleteMatch, completeMatch } from "../utils/matchLifecycle.js";
 
 export const submitCode = async (req, res) => {
     try {
         const userId = req.result._id
         const problemId = req.params.id
 
-        const { code, language } = req.body;
+        const { code, language, matchId } = req.body;
 
         if (!userId || !code || !problemId || !language) {
             return res.status(400).send("Some field missing");
@@ -26,7 +27,8 @@ export const submitCode = async (req, res) => {
             language,
             code: code,
             testCases: allTestCases,
-            problemSignature: problemSignature
+            problemSignature: problemSignature,
+            judgeConfig: problem.judgeConfig || {}
         });
         //console.log(result)
         const submittedResult = await Submission.create({
@@ -45,10 +47,14 @@ export const submitCode = async (req, res) => {
 
         // --- BATTLE ENGINE LOGIC ---
         try {
-            const match = await Match.findOne({
+            const matchQuery = {
                 "participants.userId": userId,
                 status: "Ongoing"
-            }).populate("participants.userId", "firstName lastName profilePicture rating rank");
+            };
+            if (matchId) {
+                matchQuery.matchId = matchId;
+            }
+            const match = await Match.findOne(matchQuery).populate("participants.userId", "firstName lastName profilePicture rating rank");
 
             if (match) {
                 const participant = match.participants.find(p => p.userId._id.toString() === userId.toString());
@@ -68,31 +74,38 @@ export const submitCode = async (req, res) => {
                         participant.totalTimeMinutes += (timeTakenMinutes + penalty);
                         participant.totalScore += 1;
                         
+                        const allSolvedByCurrentUser = participant.problemStats.every(ps => ps.solved);
+                        if (allSolvedByCurrentUser) {
+                            participant.status = "Finished";
+                            participant.finalSubmittedAt = new Date();
+                        }
                         await match.save();
-                        
-                        // Check win condition
-                        const allSolved = participant.problemStats.every(ps => ps.solved);
-                        if (allSolved && match.type === 'Ranked') {
-                            match.status = 'Completed';
-                            match.endTime = new Date();
-                            await match.save();
-                            
-                            if (req.io) {
-                                req.io.to(match.matchId).emit('gameEnded', { 
-                                    participants: match.participants, 
-                                    winner: userId 
+
+                        if (shouldAutoCompleteMatch(match)) {
+                            const completed = await completeMatch(match.matchId);
+                            if (completed && req.io) {
+                                req.io.to(match.matchId).emit('gameEnded', {
+                                    participants: completed.participants,
+                                    leaderboard: buildLeaderboard(completed),
+                                    winner: userId
                                 });
                             }
-                        } else {
-                            // Emit Live Leaderboard update if game hasn't ended
-                            if (req.io) {
-                                req.io.to(match.matchId).emit("leaderboardUpdate", { participants: match.participants });
-                            }
+                        } else if (req.io) {
+                            req.io.to(match.matchId).emit("leaderboardUpdate", {
+                                participants: match.participants,
+                                leaderboard: buildLeaderboard(match),
+                            });
                         }
                     } else {
                         // Wrong answer, TLE, RE, etc.
                         problemStat.failedAttempts += 1;
                         await match.save();
+                        if (req.io) {
+                            req.io.to(match.matchId).emit("leaderboardUpdate", {
+                                participants: match.participants,
+                                leaderboard: buildLeaderboard(match),
+                            });
+                        }
                     }
                 }
             }

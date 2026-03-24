@@ -2,7 +2,7 @@ import { executeBatch } from "./execute.js";
 import { combineExpected } from "./inputBuilder/combineExpected.js";
 import { compareOutput } from "./outputComparator/compare.js";
 
-export const runJudge = async ({ language, code, testCases, problemSignature }) => {
+export const runJudge = async ({ language, code, testCases, problemSignature, judgeConfig = {} }) => {
     try {
         const execution = await executeBatch({ language, code, testCases, problemSignature });
 
@@ -28,7 +28,10 @@ export const runJudge = async ({ language, code, testCases, problemSignature }) 
         const expectedOutput = combineExpected(expectedOutputs);
 
         // Compare Output
-        const comparisonResult = compareOutput(actualOutput, expectedOutput);
+        const comparisonResult = compareOutput(actualOutput, expectedOutput, {
+            mode: judgeConfig.outputMode || "token",
+            floatTolerance: judgeConfig.floatTolerance ?? 0.000001
+        });
 
         let passed = comparisonResult.passed;
         let details = comparisonResult;

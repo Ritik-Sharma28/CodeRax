@@ -18,8 +18,19 @@ const problemSchema = new Schema({
     },
     tags: {
         type: String,
-        enum: ['array', 'linkedList', 'graph', 'dp'],
+        enum: ['array', 'string', 'linkedList', 'tree', 'bst', 'graph', 'dp', 'greedy', 'stack', 'queue', 'heap', 'hashing', 'binarySearch', 'math'],
         required: true
+    },
+    judgeConfig: {
+        outputMode: {
+            type: String,
+            enum: ['token', 'exact', 'unorderedTokens', 'float'],
+            default: 'token'
+        },
+        floatTolerance: {
+            type: Number,
+            default: 0.000001
+        }
     },
 
     // Defines the function signature for code generation

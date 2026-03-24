@@ -2,6 +2,7 @@ import crypto from "crypto";
 import Match from "../models/match.js";
 import Problem from "../models/problem.js";
 import { redisClient } from "../config/redis.js";
+import { buildLeaderboard, completeMatch, shouldAutoCompleteMatch } from "../utils/matchLifecycle.js";
 
 const generateMatchId = () => crypto.randomBytes(3).toString("hex").toUpperCase();
 
@@ -152,12 +153,97 @@ export const getMatch = async (req, res) => {
     const { matchId } = req.params;
     if (!matchId) return res.status(400).json({ error: "matchId is required" });
 
-    const match = await Match.findOne({ matchId }).populate("participants.userId", "firstName lastName profilePicture rating rank");
+    let match = await Match.findOne({ matchId }).populate("participants.userId", "firstName lastName profilePicture rating rank");
     if (!match) return res.status(404).json({ error: "Match not found" });
 
-    res.json(match);
+    // Recovery guard: if timer expired but game is still marked Ongoing, finalize now.
+    if (match.status === "Ongoing" && match.endTime && new Date(match.endTime).getTime() <= Date.now()) {
+      const completed = await completeMatch(matchId);
+      if (completed) {
+        match = completed;
+      }
+    }
+
+    res.json({
+      ...match.toObject(),
+      leaderboard: buildLeaderboard(match),
+    });
   } catch (err) {
     console.error("Get Match Error:", err);
     res.status(500).json({ error: "Server error fetching match" });
+  }
+};
+
+export const submitFinal = async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const userId = req.result._id;
+
+    const match = await Match.findOne({ matchId }).populate(
+      "participants.userId",
+      "firstName lastName profilePicture rating rank"
+    );
+    if (!match) return res.status(404).json({ error: "Match not found" });
+    if (match.status !== "Ongoing") return res.status(400).json({ error: "Battle is not active" });
+
+    const participant = match.participants.find((p) => p.userId._id.toString() === userId.toString());
+    if (!participant) return res.status(403).json({ error: "You are not part of this battle" });
+
+    participant.status = "Finished";
+    participant.finalSubmittedAt = participant.finalSubmittedAt || new Date();
+    await match.save();
+
+    if (shouldAutoCompleteMatch(match)) {
+      const completed = await completeMatch(matchId);
+      if (completed) {
+        req.io?.to(matchId).emit("gameEnded", {
+          participants: completed.participants,
+          leaderboard: buildLeaderboard(completed),
+        });
+        return res.json({ message: "Battle completed successfully" });
+      }
+    }
+
+    req.io?.to(matchId).emit("leaderboardUpdate", {
+      participants: match.participants,
+      leaderboard: buildLeaderboard(match),
+    });
+
+    return res.json({ message: "Final submission recorded" });
+  } catch (err) {
+    console.error("Submit Final Error:", err);
+    return res.status(500).json({ error: "Server error submitting final battle" });
+  }
+};
+
+export const finishMatch = async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const userId = req.result._id;
+
+    const match = await Match.findOne({ matchId });
+    if (!match) return res.status(404).json({ error: "Match not found" });
+    if (match.hostId.toString() !== userId.toString()) {
+      return res.status(403).json({ error: "Only host can finish this battle" });
+    }
+    if (match.type !== "Custom") {
+      return res.status(400).json({ error: "Manual finish is only allowed in custom rooms" });
+    }
+    if (match.status !== "Ongoing") {
+      return res.status(400).json({ error: "Battle is not active" });
+    }
+
+    const completedMatch = await completeMatch(matchId);
+    if (!completedMatch) return res.status(404).json({ error: "Match not found" });
+
+    req.io?.to(matchId).emit("gameEnded", {
+      participants: completedMatch.participants,
+      leaderboard: buildLeaderboard(completedMatch),
+    });
+
+    return res.json({ message: "Battle finished successfully" });
+  } catch (err) {
+    console.error("Finish Match Error:", err);
+    return res.status(500).json({ error: "Server error finishing battle" });
   }
 };

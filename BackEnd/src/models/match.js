@@ -50,8 +50,12 @@ const matchSchema = new Schema({
         },
         status: {
             type: String,
-            enum: ['Joined', 'Ready'],
+            enum: ['Joined', 'Ready', 'Finished', 'Forfeited'],
             default: 'Joined'
+        },
+        finalSubmittedAt: {
+            type: Date,
+            default: null
         },
         totalScore: {
             type: Number,

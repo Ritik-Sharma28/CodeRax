@@ -3,8 +3,8 @@ import Editor from '@monaco-editor/react';
 
 const LANGUAGES = [
     { key: 'cpp', label: 'C++' },
-    { key: 'javascript', label: 'JavaScript' },
     { key: 'java', label: 'Java' },
+    { key: 'python', label: 'Python' },
 ];
 
 function CodeEditor({ code, selectedLanguage, onCodeChange, onLanguageChange, darkMode }) {
@@ -16,7 +16,7 @@ function CodeEditor({ code, selectedLanguage, onCodeChange, onLanguageChange, da
 
     const getMonacoLanguage = (lang) => {
         switch (lang) {
-            case 'javascript': return 'javascript';
+            case 'python': return 'python';
             case 'java': return 'java';
             case 'cpp': return 'cpp';
             default: return 'cpp';

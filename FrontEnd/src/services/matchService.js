@@ -20,6 +20,18 @@ const matchService = {
         const response = await axiosClient.post('/api/match/queue', { rating });
         return response.data;
     },
+    cancelQueue: async () => {
+        const response = await axiosClient.post('/api/match/cancel-queue');
+        return response.data;
+    },
+    submitFinal: async (matchId) => {
+        const response = await axiosClient.post(`/api/match/${matchId}/submit-final`);
+        return response.data;
+    },
+    finishMatch: async (matchId) => {
+        const response = await axiosClient.post(`/api/match/${matchId}/finish`);
+        return response.data;
+    },
 
     uploadProfilePicture: async (formData) => {
         const response = await axiosClient.post('/api/user/profile-picture', formData, {

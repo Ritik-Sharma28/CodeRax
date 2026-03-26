@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
-import io from 'socket.io-client';
 import matchService from '../services/matchService';
 import problemService from '../services/problemService';
 import submissionService from '../services/submissionService';
@@ -36,6 +35,8 @@ const BattleArena = () => {
 
   // Leaderboard
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
+  const [actionMessage, setActionMessage] = useState('');
 
   // Timer
   const [timeLeft, setTimeLeft] = useState(0);
@@ -142,7 +143,7 @@ const BattleArena = () => {
 
     socket.on('leaderboardUpdate', (data) => {
       if (!isMounted) return;
-      setMatchData(prev => prev ? { ...prev, participants: data.participants } : prev);
+      setMatchData(prev => prev ? { ...prev, participants: data.participants, leaderboard: data.leaderboard || prev.leaderboard } : prev);
     });
 
     socket.on('gameEnded', () => {
@@ -283,10 +284,49 @@ const BattleArena = () => {
   };
 
   // ───── Exit ─────
-  const handleExit = () => {
-    if (window.confirm('Are you sure you want to leave the battle? You will forfeit the match.')) {
-      socket.emit('forfeitMatch', { matchId, userId: user._id });
+  const handleExit = async () => {
+    if (!window.confirm('Are you sure you want to leave the battle? You will forfeit the match.')) return;
+    try {
+      await new Promise((resolve) => {
+        socket.emit('forfeitMatch', { matchId, userId: user._id }, () => resolve());
+      });
+    } finally {
       navigate('/battle-lobby');
+    }
+  };
+
+  const handleSubmitContest = async () => {
+    try {
+      setFinalizing(true);
+      const socketResponse = await new Promise((resolve) => {
+        socket.emit('submitContest', { matchId }, (ack) => resolve(ack));
+      });
+
+      if (socketResponse?.ok) {
+        setActionMessage(socketResponse.message || 'Contest submitted');
+        setTimeout(() => setActionMessage(''), 2000);
+        return;
+      }
+
+      await matchService.submitFinal(matchId);
+      setActionMessage('Contest submitted');
+      setTimeout(() => setActionMessage(''), 2000);
+    } catch (err) {
+      setActionMessage(err?.response?.data?.error || 'Failed to submit contest');
+      setTimeout(() => setActionMessage(''), 3000);
+    } finally {
+      setFinalizing(false);
+    }
+  };
+
+  const handleFinishBattle = async () => {
+    try {
+      setFinalizing(true);
+      await matchService.finishMatch(matchId);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Failed to finish battle');
+    } finally {
+      setFinalizing(false);
     }
   };
 
@@ -324,11 +364,17 @@ const BattleArena = () => {
   }
 
   // Sorted leaderboard
-  const sortedParticipants = matchData?.participants
+  const sortedParticipants = matchData?.leaderboard?.length
+    ? matchData.leaderboard
+    : matchData?.participants
     ? [...matchData.participants].sort((a, b) => {
-        if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
-        return a.totalTimeMinutes - b.totalTimeMinutes;
-      })
+      if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+      return a.totalTimeMinutes - b.totalTimeMinutes;
+    }).map((p, idx) => ({
+      ...p,
+      rank: idx + 1,
+      solvedCount: p.problemStats?.filter((x) => x.solved).length || 0
+    }))
     : [];
 
   const currentProblem = problems[activeIndex] || null;
@@ -338,11 +384,11 @@ const BattleArena = () => {
     <div className={`h-screen flex flex-col transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-white'}`}>
 
       {/* ── Top Bar (replaces Navbar) ── */}
-      <div className={`flex items-center justify-between px-3 sm:px-4 py-2 border-b flex-shrink-0
+      <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2.5 sm:px-4 py-2 border-b flex-shrink-0
         ${darkMode ? 'bg-slate-900 border-slate-700/60' : 'bg-slate-50 border-slate-200/60'}`}>
 
         {/* Left: Problem Tabs + Arrows */}
-        <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none min-w-0">
+        <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none w-full sm:w-auto min-w-0">
           <button onClick={() => switchProblem(activeIndex - 1)} disabled={activeIndex === 0}
             className={`p-1.5 rounded-lg flex-shrink-0 transition-colors ${activeIndex === 0 ? 'opacity-30 cursor-not-allowed' : (darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-200 text-slate-600')}`}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -380,12 +426,27 @@ const BattleArena = () => {
         </div>
 
         {/* Right: Leaderboard Toggle + Dark Mode + Exit */}
-        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-          {/* Mobile timer */}
-          <span className={`sm:hidden text-xs font-mono font-black px-2 py-1 rounded-lg
+        <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto flex-shrink-0">
+          <span className={`sm:hidden text-[11px] font-mono font-black px-2 py-1 rounded-lg
             ${timeLeft < 60000 ? 'text-red-500 bg-red-500/10' : (darkMode ? 'text-slate-300 bg-slate-800' : 'text-slate-600 bg-slate-100')}`}>
             {formatTime(timeLeft)}
           </span>
+          <button
+            onClick={handleSubmitContest}
+            disabled={finalizing}
+            className={`inline-flex px-2 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${darkMode ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
+            title="Submit Contest">
+            Submit Contest
+          </button>
+          {matchData?.type === 'Custom' && String(matchData?.hostId?._id || matchData?.hostId) === String(user?._id) && (
+            <button
+              onClick={handleFinishBattle}
+              disabled={finalizing}
+              className={`inline-flex px-2 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors ${darkMode ? 'bg-orange-500/20 text-orange-300 hover:bg-orange-500/30' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}
+              title="Finish Battle">
+              End (Host)
+            </button>
+          )}
 
           <button onClick={() => setShowLeaderboard(!showLeaderboard)}
             className={`p-2 rounded-lg transition-colors ${showLeaderboard ? (darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600') : (darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-200 text-slate-600')}`}
@@ -408,6 +469,11 @@ const BattleArena = () => {
           </button>
         </div>
       </div>
+      {actionMessage && (
+        <div className={`px-3 sm:px-4 py-2 text-xs font-semibold border-b ${darkMode ? 'bg-slate-900/90 border-slate-700 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
+          {actionMessage}
+        </div>
+      )}
 
       {/* ── Mobile Panel Switcher ── */}
       <div className={`flex md:hidden border-b ${darkMode ? 'bg-slate-900 border-slate-700/60' : 'bg-slate-50 border-slate-200/60'}`}>
@@ -445,6 +511,7 @@ const BattleArena = () => {
               problemId={currentProblem._id}
               darkMode={darkMode}
               setSubmitResult={setSubmitResult}
+              battleMode
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">
@@ -474,12 +541,13 @@ const BattleArena = () => {
             activeRightTab={activeRightTab}
             setActiveRightTab={setActiveRightTab}
             problemId={currentProblem?._id}
+            battleMode
           />
         </div>
 
         {/* Leaderboard Side Panel */}
         {showLeaderboard && (
-          <div className={`absolute md:relative right-0 top-0 bottom-0 z-20 w-[280px] sm:w-[300px] md:w-[25%] flex flex-col border-l shadow-xl
+          <div className={`absolute md:relative right-0 top-0 bottom-0 z-20 w-full sm:w-[320px] md:w-[25%] flex flex-col border-l shadow-xl
             ${darkMode ? 'bg-slate-900 border-slate-700/60' : 'bg-white border-slate-200/60'}`}>
 
             <div className={`flex items-center justify-between px-4 py-3 border-b flex-shrink-0
@@ -494,19 +562,19 @@ const BattleArena = () => {
 
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {sortedParticipants.map((p, index) => (
-                <div key={p.userId?._id || index}
+                <div key={p.userId?._id || p.userId || index}
                   className={`flex items-center gap-3 p-3 rounded-xl border transition-all
                     ${index === 0
                       ? (darkMode ? 'bg-indigo-900/30 border-indigo-500/40' : 'bg-indigo-50 border-indigo-200')
                       : (darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-slate-50 border-slate-200')
                     }`}>
                   <div className={`w-6 text-center text-xs font-black ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-slate-400' : index === 2 ? 'text-amber-600' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>
-                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${p.rank || index + 1}`}
                   </div>
                   <img src={p.userId?.profilePicture || 'https://via.placeholder.com/32'} className={`w-8 h-8 rounded-full border flex-shrink-0 ${darkMode ? 'border-slate-600' : 'border-slate-300'}`} alt="" />
                   <div className="flex-1 min-w-0">
                     <p className={`font-bold text-xs truncate ${darkMode ? 'text-white' : 'text-slate-900'}`}>{p.userId?.firstName || 'Player'}</p>
-                    <p className="text-[10px] text-indigo-500 font-semibold">Score: {p.totalScore} • {p.totalTimeMinutes}m</p>
+                    <p className="text-[10px] text-indigo-500 font-semibold">Score: {p.totalScore} • Solved: {p.solvedCount ?? 0} • {p.totalTimeMinutes}m</p>
                   </div>
                 </div>
               ))}

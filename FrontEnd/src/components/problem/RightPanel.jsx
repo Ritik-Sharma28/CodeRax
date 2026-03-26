@@ -173,7 +173,9 @@ function RightPanel({
     activeRightTab,
     setActiveRightTab,
     problemId,
+    battleMode = false,
 }) {
+    const availableTabs = battleMode ? RIGHT_TABS.filter((tab) => tab.key !== 'notes') : RIGHT_TABS;
     return (
         <div className="flex-1 flex flex-col min-h-0">
             {/* Tab Navigation */}
@@ -183,7 +185,7 @@ function RightPanel({
                     : 'bg-slate-50/60 border-slate-200/60'
                 }`}
             >
-                {RIGHT_TABS.map((tab) => (
+                {availableTabs.map((tab) => (
                     <button
                         key={tab.key}
                         onClick={() => setActiveRightTab(tab.key)}

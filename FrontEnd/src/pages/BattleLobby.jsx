@@ -54,15 +54,15 @@ const BattleLobby = () => {
     
     // Initial emit
     socket.emit("authenticate", user._id);
-    if (matchData) {
-        socket.emit("joinRoom", matchData.matchId);
+    if (matchDataRef.current) {
+        socket.emit("joinRoom", matchDataRef.current.matchId);
     }
 
     // Reconnection strategy
     const onConnect = () => {
         socket.emit("authenticate", user._id);
-        if (matchData) {
-            socket.emit('joinRoom', matchData.matchId);
+        if (matchDataRef.current) {
+            socket.emit('joinRoom', matchDataRef.current.matchId);
         }
     };
     socket.on('connect', onConnect);
@@ -78,13 +78,21 @@ const BattleLobby = () => {
         navigate(`/battle/${data.matchId}`);
     });
 
+    socket.on('gameStarted', (data) => {
+      const startedMatchId = data?.match?.matchId || matchDataRef.current?.matchId;
+      if (startedMatchId) {
+        navigate(`/battle/${startedMatchId}`);
+      }
+    });
+
     return () => {
       socket.off('connect', onConnect);
       socket.off('playerJoined');
       socket.off('matchFound');
+      socket.off('gameStarted');
       socket.disconnect();
     };
-  }, [user, navigate, matchData]);
+  }, [user, navigate, dispatch]);
 
   const createMatch = async () => {
     setLoading(true);
@@ -227,9 +235,9 @@ const BattleLobby = () => {
       <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
       
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className={`w-full max-w-xl p-6 sm:p-10 rounded-2xl shadow-xl border ${darkMode ? 'bg-slate-900 border-slate-800 shadow-[0_10px_40px_-10px_rgba(79,70,229,0.15)]' : 'bg-white border-slate-200'}`}>
+          <div className={`w-full max-w-xl p-4 sm:p-10 rounded-2xl shadow-xl border ${darkMode ? 'bg-slate-900 border-slate-800 shadow-[0_10px_40px_-10px_rgba(79,70,229,0.15)]' : 'bg-white border-slate-200'}`}>
           <div className="text-center mb-8">
-            <h1 className={`text-3xl sm:text-5xl font-black mb-2 tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>DSA Arena</h1>
+            <h1 className={`text-2xl sm:text-5xl font-black mb-2 tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>DSA Arena</h1>
             <p className={`text-sm font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Dominate the leaderboards in real-time battles.</p>
           </div>
 
@@ -239,13 +247,13 @@ const BattleLobby = () => {
           <div className={`flex p-1 rounded-xl mb-8 ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
              <button 
                 onClick={() => setActiveTab('Ranked')} 
-                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'Ranked' ? 'bg-indigo-600 text-white shadow' : (darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900')}`}
+                className={`flex-1 py-2.5 sm:py-3 text-xs sm:text-sm font-bold rounded-lg transition-all ${activeTab === 'Ranked' ? 'bg-indigo-600 text-white shadow' : (darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900')}`}
              >
                  🏆 Ranked Match
              </button>
              <button 
                 onClick={() => setActiveTab('Custom')} 
-                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'Custom' ? 'bg-indigo-600 text-white shadow' : (darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900')}`}
+                className={`flex-1 py-2.5 sm:py-3 text-xs sm:text-sm font-bold rounded-lg transition-all ${activeTab === 'Custom' ? 'bg-indigo-600 text-white shadow' : (darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900')}`}
              >
                  🤝 Custom Room
              </button>
@@ -284,7 +292,7 @@ const BattleLobby = () => {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className={`p-6 rounded-xl border ${darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                 <h2 className="text-indigo-500 font-bold mb-4 uppercase text-sm tracking-wider">Host A Match</h2>
-                <div className="grid grid-cols-2 gap-4 mb-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                   <div>
                     <label className={`block text-xs font-bold mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Max Players (2-10)</label>
                     <input type="number" min="2" max="10" value={maxPlayers} onChange={(e) => setMaxPlayers(parseInt(e.target.value, 10))} className={`w-full border rounded-lg p-2.5 font-bold outline-none transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 text-white focus:border-indigo-500' : 'bg-white border-slate-300 text-slate-900 focus:border-indigo-500'}`} />
@@ -340,9 +348,9 @@ const BattleLobby = () => {
 
               <form onSubmit={joinMatch} className={`p-6 rounded-xl border block ${darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
                 <h2 className="text-purple-500 font-bold mb-4 uppercase text-sm tracking-wider">Join via Code</h2>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <input type="text" placeholder="ENTER 6-CHAR CODE" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={6} className={`flex-1 border uppercase rounded-xl p-3 text-center text-lg font-mono tracking-widest font-black placeholder-slate-500 outline-none transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 text-white focus:border-purple-500' : 'bg-white border-slate-300 text-slate-900 focus:border-purple-500'}`} />
-                  <button disabled={loading || joinCode.length < 6} type="submit" className="bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:text-slate-400 text-white font-black px-6 rounded-xl transition duration-200 flex-shrink-0 shadow-md shadow-purple-600/30">
+                  <button disabled={loading || joinCode.length < 6} type="submit" className="bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:text-slate-400 text-white font-black px-6 py-3 rounded-xl transition duration-200 flex-shrink-0 shadow-md shadow-purple-600/30">
                     Join
                   </button>
                 </div>

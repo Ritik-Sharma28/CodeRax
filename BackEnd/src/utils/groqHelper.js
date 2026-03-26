@@ -11,7 +11,7 @@ const openai = new OpenAI({
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// EDIT THIS LINE TO SIMULATE RATE LIMITS FOR TESTING
+
 const SIMULATE_RATE_LIMIT = false;
 // Set to `true`, restart server, then try any AI feature → you'll get the 429 UI
 // ──────────────────────────────────────────────────────────────────────────────

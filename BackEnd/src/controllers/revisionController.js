@@ -89,7 +89,7 @@ export const saveMemory = async (req, res) => {
 export const getMemories = async (req, res) => {
     try {
         const memories = await RevisionMemory
-            .find({ userId: req.result._id })
+            .find({ userId: req.result._id, sourceType: { $ne: 'interview' } })
             .select('-vector')
             .populate('problemId', 'title')
             .sort({ createdAt: -1 });
@@ -168,6 +168,8 @@ export const revisionChat = async (req, res) => {
                     $project: {
                         summary: 1,
                         tags: 1,
+                        topic: 1,
+                        sourceType: 1,
                         problemId: 1,
                         score: { $meta: "vectorSearchScore" }
                     }
@@ -213,7 +215,7 @@ export const revisionChat = async (req, res) => {
         } else {
             const notesBlock = relevantNotes
                 .map((note, i) => {
-                    const pTitle = note.problemId?.title || 'Unknown Problem';
+                    const pTitle = note.problemId?.title || note.topic || 'Unknown Topic';
                     return `Note ${i + 1} (Problem: ${pTitle}) [Tags: ${note.tags?.join(', ') || 'none'}]: ${note.summary}`;
                 })
                 .join('\n');
@@ -324,7 +326,7 @@ export const getMemoriesByProblem = async (req, res) => {
         }
 
         const memories = await RevisionMemory
-            .find({ userId: req.result._id, problemId })
+            .find({ userId: req.result._id, problemId, sourceType: { $ne: 'interview' } })
             .select('-vector')
             .sort({ createdAt: -1 });
 

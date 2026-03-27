@@ -11,7 +11,16 @@ const revisionMemorySchema = new Schema({
     problemId: {
         type: Schema.Types.ObjectId,
         ref: 'problem',
-        required: true
+        default: null
+    },
+    topic: {
+        type: String,
+        default: ""
+    },
+    sourceType: {
+        type: String,
+        enum: ["problem_note", "interview"],
+        default: "problem_note"
     },
     tags: {
         type: [String],
@@ -32,6 +41,8 @@ const revisionMemorySchema = new Schema({
 }, {
     timestamps: true
 });
+
+revisionMemorySchema.index({ userId: 1, sourceType: 1, createdAt: -1 });
 
 const RevisionMemory = mongoose.model("revisionmemory", revisionMemorySchema);
 

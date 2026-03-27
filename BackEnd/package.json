@@ -5,6 +5,7 @@
     "seed:advanced": "node src/scripts/seedAdvancedStructures.js"
   },
   "dependencies": {
+    "@google/genai": "^1.46.0",
     "@xenova/transformers": "^2.17.2",
     "axios": "^1.13.4",
     "bcrypt": "^6.0.0",

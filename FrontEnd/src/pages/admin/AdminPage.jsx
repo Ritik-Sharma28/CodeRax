@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router';
-import problemService from '../services/problemService';
-import Navbar from '../components/Navbar';
-import AdminProblemList from '../components/admin/AdminProblemList';
-import AdminProblemForm from '../components/admin/AdminProblemForm';
+import problemService from '../../services/problemService';
+import Navbar from '../../components/Navbar';
+import AdminProblemList from '../../components/admin/AdminProblemList';
+import AdminProblemForm from '../../components/admin/AdminProblemForm';
 
 const EMPTY_FORM = {
     title: '',

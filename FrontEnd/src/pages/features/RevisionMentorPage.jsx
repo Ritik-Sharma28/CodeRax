@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import axiosClient from '../services/axiosClient';
-import Navbar from '../components/Navbar';
+import axiosClient from '../../services/axiosClient';
+import Navbar from '../../components/Navbar';
 
 // ─── Shared Markdown Renderer ────────────────────────────────────────────────
 function renderMarkdown(text, darkMode) {
@@ -388,7 +388,7 @@ export default function RevisionMentorPage() {
                                     <div key={note._id} className={`p-4 rounded-xl border transition-all hover:shadow-sm ${darkMode ? 'bg-slate-800/60 border-slate-700/50 hover:border-slate-600' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
                                         <div className="flex items-start justify-between gap-2 mb-2">
                                             <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md ${darkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
-                                                {note.problemId?.title || 'Unknown Problem'}
+                                                {note.problemId?.title || note.topic || 'Unknown Topic'}
                                             </span>
                                             <button onClick={() => handleDeleteNote(note._id)} disabled={deletingId === note._id} className={`p-1 rounded transition-all flex-shrink-0 ${deletingId === note._id ? 'opacity-50' : ''} ${darkMode ? 'text-slate-600 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-300 hover:text-red-500 hover:bg-red-50'}`}>
                                                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>

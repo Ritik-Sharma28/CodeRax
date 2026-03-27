@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
-import axiosClient from "./axiosClient"
+import axiosClient from "../axiosClient"
 
 export const registerUser = createAsyncThunk(
     "auth/register",
@@ -58,6 +58,7 @@ const initialState = {
     user: null,
     isAuthenticated: false,
     loading: false,
+    authChecked: false,
     error: null
 }
 
@@ -109,12 +110,14 @@ const authSlice = createSlice({
             })
             .addCase(checkAuth.fulfilled, (state, action) => {
                 state.loading = false;
+                state.authChecked = true;
                 state.isAuthenticated = !!action.payload;
                 state.user = action.payload;
             })
             .addCase(checkAuth.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload?.message || 'Something went wrong';
+                state.authChecked = true;
+                state.error = null;
                 state.isAuthenticated = false;
                 state.user = null;
             })

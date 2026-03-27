@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
-import problemService from '../services/problemService';
-import submissionService from '../services/submissionService';
-import Navbar from '../components/Navbar';
-import LeftPanel from '../components/problem/LeftPanel';
-import RightPanel from '../components/problem/RightPanel';
+import problemService from '../../services/problemService';
+import submissionService from '../../services/submissionService';
+import Navbar from '../../components/Navbar';
+import LeftPanel from '../../components/problem/LeftPanel';
+import RightPanel from '../../components/problem/RightPanel';
 
 const ProblemPage = () => {
     const [problem, setProblem] = useState(null);

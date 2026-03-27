@@ -1,36 +1,42 @@
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, NavLink } from 'react-router';
-import { loginUser } from "../services/authSlice";
-import { useState, useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router';
+import { registerUser } from '../../services/slices/authSlice';
 
-const loginSchema = z.object({
-    emailId: z.string().email("Please enter a valid email"),
-    password: z.string().min(8, "Password must be at least 8 characters")
+const signupSchema = z.object({
+    firstName: z.string().min(3, 'Minimum 3 characters required'),
+    emailId: z.string().email('Please enter a valid email address'),
+    password: z.string()
+        .min(8, 'Password must be at least 8 characters')
+        .regex(/[A-Z]/, 'Must include an uppercase letter')
+        .regex(/[a-z]/, 'Must include a lowercase letter')
+        .regex(/[0-9]/, 'Must include a number')
+        .regex(/[^A-Za-z0-9]/, 'Must include a special character (!@#$...)'),
 });
 
-function Login() {
+function Signup() {
     const [showPassword, setShowPassword] = useState(false);
     const [backendError, setBackendError] = useState(null);
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    console.log()
-    const { isAuthenticated, loading, error } = useSelector((state) => state.auth);
+    const { loading, isAuthenticated } = useSelector((state) => state.auth);
+
     const {
         register,
         handleSubmit,
         formState: { errors },
-    } = useForm({ resolver: zodResolver(loginSchema) });
+    } = useForm({ resolver: zodResolver(signupSchema) });
 
     const onSubmit = (data) => {
         setBackendError(null);
-        dispatch(loginUser(data))
+        dispatch(registerUser(data))
             .unwrap()
             .catch((err) => {
-                const msg = err?.response?.data || err?.message || 'Invalid Credentials';
-                setBackendError('Invalid Credentials');
+                const msg = err?.response?.data?.error || err?.message || 'User Already Exists With This Email';
+                setBackendError('User Already Exists With This Email');
             });
     };
 
@@ -67,13 +73,13 @@ function Login() {
                 {/* Hero */}
                 <div className="relative z-10 flex-1 flex flex-col justify-center py-8">
                     <h1 className="text-4xl xl:text-[2.75rem] font-extrabold text-white leading-[1.15] tracking-tight mb-5">
-                        Welcome back.<br />
+                        Code smarter.<br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-blue-400 to-purple-400">
-                            Let's keep going.
+                            Not harder.
                         </span>
                     </h1>
                     <p className="text-slate-400 text-base leading-relaxed max-w-sm mb-10">
-                        Your progress is waiting. Jump back in and continue solving problems at your own pace.
+                        A reimagined coding environment built to accelerate your growth and help you land your dream role.
                     </p>
 
                     {/* Features */}
@@ -116,7 +122,7 @@ function Login() {
             {/* ═══ RIGHT: Form panel (full screen on mobile, right half on desktop) ═══ */}
             <div className="flex-1 flex flex-col min-h-screen min-h-[100dvh] bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 relative">
 
-                {/* Ambient blobs */}
+                {/* Ambient blobs for right panel */}
                 <div className="absolute top-[-20%] right-[-15%] w-[50vw] h-[50vw] lg:w-[30vw] lg:h-[30vw] bg-indigo-400/8 rounded-full blur-[80px] pointer-events-none" />
                 <div className="absolute bottom-[-10%] left-[-10%] w-[40vw] h-[40vw] lg:w-[20vw] lg:h-[20vw] bg-purple-400/6 rounded-full blur-[60px] pointer-events-none" />
 
@@ -130,8 +136,8 @@ function Login() {
                         </div>
                         <span className="lg:hidden text-lg font-bold text-slate-900">LeetCode</span>
                     </div>
-                    <NavLink to="/signup" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
-                        Sign up
+                    <NavLink to="/login" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
+                        Log in
                     </NavLink>
                 </div>
 
@@ -140,9 +146,9 @@ function Login() {
                     <div className="w-full max-w-[400px]">
 
                         <div className="mb-7">
-                            <span className="text-indigo-600 font-semibold text-xs tracking-widest uppercase block mb-1.5">Welcome back</span>
-                            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Log in to your account</h1>
-                            <p className="text-slate-500 mt-1.5 text-sm">Pick up right where you left off.</p>
+                            <span className="text-indigo-600 font-semibold text-xs tracking-widest uppercase block mb-1.5">First time here?</span>
+                            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Welcome aboard 👋</h1>
+                            <p className="text-slate-500 mt-1.5 text-sm">Create your account and start coding.</p>
                             {backendError && (
                                 <div className="mt-3 px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-medium">
                                     {backendError}
@@ -151,6 +157,23 @@ function Login() {
                         </div>
 
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                            {/* Name */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Full Name</label>
+                                <input
+                                    type="text"
+                                    placeholder="Jane Doe"
+                                    className={`w-full px-4 py-3 rounded-xl border text-slate-900 placeholder-slate-400 bg-white
+                                        transition-all duration-200 outline-none shadow-sm text-sm
+                                        ${errors.firstName
+                                            ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10'
+                                            : 'border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10'
+                                        }`}
+                                    {...register('firstName')}
+                                />
+                                {errors.firstName && <p className="text-xs text-red-500 mt-1 font-medium">{errors.firstName.message}</p>}
+                            </div>
+
                             {/* Email */}
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Email</label>
@@ -191,7 +214,10 @@ function Login() {
                                         )}
                                     </button>
                                 </div>
-                                {errors.password && <p className="text-xs text-red-500 mt-1 font-medium">{errors.password.message}</p>}
+                                {errors.password
+                                    ? <p className="text-xs text-red-500 mt-1 font-medium">{errors.password.message}</p>
+                                    : <p className="text-xs text-slate-400 mt-1">Min. 8 chars, uppercase, lowercase, number & special char</p>
+                                }
                             </div>
 
                             {/* Submit */}
@@ -211,7 +237,7 @@ function Login() {
                                     </svg>
                                 ) : (
                                     <>
-                                        Log In
+                                        Create Account
                                         <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                         </svg>
@@ -221,8 +247,8 @@ function Login() {
                         </form>
 
                         <p className="text-center text-sm text-slate-500 mt-6">
-                            Don't have an account?{' '}
-                            <NavLink to="/signup" className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors">Sign up</NavLink>
+                            Already have an account?{' '}
+                            <NavLink to="/login" className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors">Log in</NavLink>
                         </p>
                     </div>
                 </div>
@@ -231,4 +257,4 @@ function Login() {
     );
 }
 
-export default Login;
+export default Signup;

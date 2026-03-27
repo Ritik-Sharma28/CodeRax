@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchAllProblems, selectProblemIndex } from '../store/problemsSlice';
+import { fetchAllProblems, selectProblemIndex } from '../../services/slices/problemsSlice';
 import { useNavigate } from 'react-router';
-import matchService from '../services/matchService';
-import { socket } from '../services/socket.js';
-import Navbar from '../components/Navbar';
+import matchService from '../../services/matchService';
+import { socket } from '../../services/socket.js';
+import Navbar from '../../components/Navbar';
 
 const BattleLobby = () => {
   const { user } = useSelector((state) => state.auth);

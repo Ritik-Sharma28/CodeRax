@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { logoutUser } from '../services/authSlice';
+import { logoutUser } from '../services/slices/authSlice';
 
 function Navbar({ darkMode, setDarkMode }) {
     const dispatch = useDispatch();
@@ -58,6 +58,14 @@ function Navbar({ darkMode, setDarkMode }) {
                         }>
                             Revision AI
                         </NavLink>
+                        <NavLink to="/mock-interview" className={({ isActive }) =>
+                            `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
+                                ? (darkMode ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-50 text-cyan-700')
+                                : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
+                            }`
+                        }>
+                            Mock Interview
+                        </NavLink>
                         <NavLink to="/battle-lobby" className={({ isActive }) =>
                             `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
                                 ? (darkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-50 text-purple-700')
@@ -108,7 +116,7 @@ function Navbar({ darkMode, setDarkMode }) {
                                 className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors
                                     ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}
                             >
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
+                                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-sm font-bold shadow-sm">
                                     {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
                                 </div>
                                 <span className={`hidden sm:block text-sm font-semibold ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -163,6 +171,13 @@ function Navbar({ darkMode, setDarkMode }) {
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.62 48.62 0 0112 20.904a48.62 48.62 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.636 50.636 0 00-2.658-.813A59.906 59.906 0 0112 3.493a59.903 59.903 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
                                             </svg>
                                             Revision AI
+                                        </NavLink>
+                                        <NavLink to="/mock-interview" onClick={() => setProfileOpen(false)}
+                                            className={`flex md:hidden items-center gap-3 px-4 py-2.5 text-sm transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
+                                            <svg className={`w-4 h-4 ${darkMode ? 'text-cyan-300' : 'text-cyan-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.5c3.866 0 7-2.91 7-6.5s-3.134-6.5-7-6.5-7 2.91-7 6.5 3.134 6.5 7 6.5zm0 0v3m-4 0h8" />
+                                            </svg>
+                                            Mock Interview
                                         </NavLink>
 
                                         {user?.role === 'admin' && (

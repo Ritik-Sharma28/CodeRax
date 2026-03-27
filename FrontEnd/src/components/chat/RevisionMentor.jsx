@@ -393,7 +393,7 @@ export default function RevisionMentor() {
                                     {/* Problem title */}
                                     <div className="flex items-center justify-between mb-1.5">
                                         <span className={`text-[10px] font-bold uppercase tracking-wide ${darkMode ? 'text-emerald-400/70' : 'text-emerald-600/70'}`}>
-                                            {note.problemId?.title || 'Unknown Problem'}
+                                                {note.problemId?.title || note.topic || 'Unknown Topic'}
                                         </span>
                                         <button
                                             onClick={() => handleDeleteNote(note._id)}

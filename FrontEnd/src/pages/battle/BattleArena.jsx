@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
-import matchService from '../services/matchService';
-import problemService from '../services/problemService';
-import submissionService from '../services/submissionService';
-import { socket } from '../services/socket.js';
-import LeftPanel from '../components/problem/LeftPanel';
-import RightPanel from '../components/problem/RightPanel';
+import matchService from '../../services/matchService';
+import problemService from '../../services/problemService';
+import submissionService from '../../services/submissionService';
+import { socket } from '../../services/socket.js';
+import LeftPanel from '../../components/problem/LeftPanel';
+import RightPanel from '../../components/problem/RightPanel';
 
 const BattleArena = () => {
   const { matchId } = useParams();

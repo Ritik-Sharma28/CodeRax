@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useSelector } from 'react-redux';
-import matchService from '../services/matchService';
-import Navbar from '../components/Navbar';
+import matchService from '../../services/matchService';
+import Navbar from '../../components/Navbar';
 
 const BattleResults = () => {
   const { matchId } = useParams();

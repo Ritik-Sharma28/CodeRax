@@ -159,13 +159,16 @@ export const solvedAllProblembyUser = async (req, res) => {
     try {
 
         const userId = req.result._id;
-
-        const user = await User.findById(userId).populate({
-            path: "problemSolved",
-            select: "_id title difficulty tags"
+        const acceptedProblemIds = await Submission.distinct("problemId", {
+            userId,
+            status: "Accepted"
         });
 
-        res.status(200).send(user.problemSolved);
+        const solvedProblems = await Problem.find({
+            _id: { $in: acceptedProblemIds }
+        }).select("_id title difficulty tags").lean();
+
+        res.status(200).send(solvedProblems);
 
     }
     catch (err) {

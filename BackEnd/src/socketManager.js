@@ -146,7 +146,7 @@ export const setupSocket = (io) => {
   
       socket.on("disconnect", async () => {
         console.log("Client disconnected:", socket.id);
-        if (socket.userId) {
+        if (socket.userId && redisClient.isReady) {
             try {
                 // Redis v4 array syntax for zRem
                 await redisClient.zRem("ranked_queue", [socket.userId.toString()]);

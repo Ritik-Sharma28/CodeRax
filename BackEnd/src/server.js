@@ -57,8 +57,16 @@ app.use("/video" , videoRouter)
 
 const serverConnect = async () => {
   try {
-    await Promise.all([main(), redisClient.connect(), initEmbedder()]);
+    await Promise.all([main(), initEmbedder()]);
     console.log("Connected to db successfully.");
+
+    redisClient.connect()
+      .then(() => {
+        console.log("Connected to redis successfully.");
+      })
+      .catch((error) => {
+        console.error("Redis connection unavailable at startup:", error?.code || error?.message || error);
+      });
     
     // Start matched worker
     initMatchmaker(io);

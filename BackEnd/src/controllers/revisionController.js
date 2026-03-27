@@ -251,6 +251,14 @@ export const revisionChat = async (req, res) => {
             temperature: 0.7,
         });
 
+        if (req.result.role !== 'admin') {
+            const user = await import('../models/user.js').then(m => m.default).then(User => User.findById(req.result._id));
+            if (user && user.revisionMsgsLeft > 0) {
+                user.revisionMsgsLeft -= 1;
+                await user.save();
+            }
+        }
+
         return res.status(200).json({
             reply,
             notesUsed: relevantNotes.length,

@@ -11,6 +11,7 @@ import {
   normalizePerformanceReport,
   validateInterviewConfig,
 } from "../interview/validation.js";
+import User from "../models/user.js";
 
 function badRequest(res, message, details = []) {
   return res.status(400).json({
@@ -30,9 +31,16 @@ export async function generateLiveToken(req, res) {
 
     const liveToken = await createInterviewLiveToken(validation.config);
 
+    const user = await User.findById(req.result._id);
+    if (user.role !== 'admin' && user.mockInterviewUseLeft > 0) {
+        user.mockInterviewUseLeft -= 1;
+        await user.save();
+    }
+
     return res.status(200).json({
       ...liveToken,
       config: validation.config,
+      mockInterviewUseLeft: user.mockInterviewUseLeft,
     });
   } catch (error) {
     console.error("generateLiveToken error:", error?.message || error);

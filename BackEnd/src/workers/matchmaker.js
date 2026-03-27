@@ -11,6 +11,10 @@ export const initMatchmaker = (socketIo) => {
     
     setInterval(async () => {
         try {
+            if (!redisClient.isReady) {
+                return;
+            }
+
             // Get all players in queue sorted by rating
             const queue = await redisClient.zRangeWithScores("ranked_queue", 0, -1);
             if (queue.length < 2) return;

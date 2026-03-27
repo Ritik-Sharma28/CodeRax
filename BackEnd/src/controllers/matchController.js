@@ -103,6 +103,10 @@ export const queueMatch = async (req, res) => {
   try {
     const userId = req.result._id;
     const { rating = 1200 } = req.body;
+
+    if (!redisClient.isReady) {
+      return res.status(503).json({ error: "Matchmaking is temporarily unavailable. Please try again in a moment." });
+    }
     
     // Clear any existing entry for this user first
     const existingQueue = await redisClient.zRange("ranked_queue", 0, -1);
@@ -130,6 +134,11 @@ export const queueMatch = async (req, res) => {
 export const cancelQueue = async (req, res) => {
     try {
         const userId = req.result._id;
+
+        if (!redisClient.isReady) {
+            return res.status(200).json({ message: "Queue already unavailable" });
+        }
+
         const existingQueue = await redisClient.zRange("ranked_queue", 0, -1);
         const existingStr = existingQueue.find(str => {
             try {

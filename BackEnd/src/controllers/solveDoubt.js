@@ -162,6 +162,14 @@ const solveDoubt = async (req, res) => {
             temperature: CONFIG.temperature,
         });
 
+        if (req.result.role !== 'admin') {
+            const user = await import('../models/user.js').then(m => m.default).then(User => User.findById(req.result._id));
+            if (user && user.aiChatMsgsLeft > 0) {
+                user.aiChatMsgsLeft -= 1;
+                await user.save();
+            }
+        }
+
         return res.status(200).json({ reply });
 
     } catch (error) {

@@ -1,5 +1,6 @@
 import express from "express"
 import { userMiddleware } from "../middleware/userMiddleware.js";
+import { rateLimitMiddleware } from "../middleware/rateLimitMiddleware.js";
 import solveDoubt from "../controllers/solveDoubt.js";
 import { saveMemory, getMemories, deleteMemory, revisionChat, saveQuickNote, getMemoriesByProblem } from "../controllers/revisionController.js";
 import {
@@ -11,7 +12,7 @@ import {
 const AIRouter = express.Router();
 
 // Existing AI chat (problem-solving doubt solver)
-AIRouter.post('/chat', userMiddleware, solveDoubt);
+AIRouter.post('/chat', userMiddleware, rateLimitMiddleware('aiChat'), solveDoubt);
 
 // Revision Memory CRUD
 AIRouter.post('/memory', userMiddleware, saveMemory);
@@ -21,10 +22,10 @@ AIRouter.get('/memories/:problemId', userMiddleware, getMemoriesByProblem);
 AIRouter.delete('/memory/:id', userMiddleware, deleteMemory);
 
 // Revision Mentor RAG chat
-AIRouter.post('/revision-chat', userMiddleware, revisionChat);
+AIRouter.post('/revision-chat', userMiddleware, rateLimitMiddleware('revisionChat'), revisionChat);
 
 // Mock interview
-AIRouter.post('/interview/live-token', userMiddleware, generateLiveToken);
+AIRouter.post('/interview/live-token', userMiddleware, rateLimitMiddleware('mockInterview'), generateLiveToken);
 AIRouter.post('/interview/grade', userMiddleware, gradeInterview);
 AIRouter.post('/interview/session', userMiddleware, saveInterviewSession);
 

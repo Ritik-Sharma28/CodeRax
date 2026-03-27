@@ -35,7 +35,10 @@ export function getGradingModel() {
 export async function createInterviewLiveToken(config) {
   const client = getGeminiClient();
   const liveModel = getLiveModel();
-  const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  
+  const minutes = config.difficulty === "easy" ? 3 : config.difficulty === "medium" ? 5 : 7;
+  const expireTime = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+  
   const systemInstruction = buildLiveSystemInstruction(config);
 
   const token = await client.authTokens.create({

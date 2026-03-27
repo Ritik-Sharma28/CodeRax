@@ -19,9 +19,11 @@ export const userMiddleware = async (req, res , next) =>{
           if(!result)
                throw new Error("User not found")
 
-          const isBlocked = await redisClient.exists(`token:${token}`)
-          if(isBlocked)
-               throw new Error("Invalid Token")
+          if (redisClient.isReady) {
+               const isBlocked = await redisClient.exists(`token:${token}`)
+               if(isBlocked)
+                    throw new Error("Invalid Token")
+          }
 
           req.result = result
           next()

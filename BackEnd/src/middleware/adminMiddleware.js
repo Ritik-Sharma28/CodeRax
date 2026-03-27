@@ -22,9 +22,11 @@ export const adminMiddleware = async (req, res , next) =>{
           if (result.role !== "admin")
             throw new Error("Invalid Credentials") 
 
-          const isBlocked = await redisClient.exists(`token:${token}`)
-          if(isBlocked)
-               throw new Error("Invalid Token")
+          if (redisClient.isReady) {
+               const isBlocked = await redisClient.exists(`token:${token}`)
+               if(isBlocked)
+                    throw new Error("Invalid Token")
+          }
 
           req.result = result
           next()

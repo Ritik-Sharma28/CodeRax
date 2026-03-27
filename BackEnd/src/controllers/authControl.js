@@ -3,6 +3,7 @@ import User from "../models/user.js";
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import { redisClient } from "../config/redis.js"
+import { resetLimitsIfNewDay } from "../utils/rateLimits.js";
 
 
 export const register = async (req, res) => {
@@ -23,6 +24,9 @@ export const register = async (req, res) => {
             emailId: user.emailId,
             _id: user._id,
             role: user.role,
+            mockInterviewUseLeft: user.mockInterviewUseLeft,
+            aiChatMsgsLeft: user.aiChatMsgsLeft,
+            revisionMsgsLeft: user.revisionMsgsLeft,
         }
         res.cookie("token", token, { maxAge: 60 * 60 * 1000 })
 
@@ -39,23 +43,26 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
     try {
-       // validate(req.body)
-
         const { emailId, password } = req.body;
 
         const user = await User.findOne({ emailId })
         if (!user) {
-            return res.status(400).send("Invalid credentials");
+            return res.status(400).json({ message: "Invalid credentials" });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).send("Invalid credentials")
+        if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+        try { await resetLimitsIfNewDay(user); } catch (e) { console.error("resetLimitsIfNewDay failed during login:", e); }
 
         const reply = {
             firstName: user.firstName,
             emailId: user.emailId,
             _id: user._id,
             role: user.role,
+            mockInterviewUseLeft: user.mockInterviewUseLeft,
+            aiChatMsgsLeft: user.aiChatMsgsLeft,
+            revisionMsgsLeft: user.revisionMsgsLeft,
         }
 
         const token = jwt.sign({ _id: user._id, emailId: emailId, role: user.role }, process.env.JWT_SECRET, { expiresIn: 60 * 60 });
@@ -65,17 +72,20 @@ export const login = async (req, res) => {
             message: "Loggin Successfully"
         })
     } catch (err) {
-        res.status(401).send("Error: " + err);
+        console.error("Login error:", err);
+        res.status(400).json({ message: "Something went wrong. Please try again." });
     }
 }
 
 export const logout = async (req, res) => {
     try {
         const token = req.cookies.token
-        const payload = jwt.decode(token)
+        const payload = token ? jwt.decode(token) : null
 
-        await redisClient.expireAt(`token:${token}`, payload.exp);
-        await redisClient.set(`token:${token}`, "blocked")
+        if (token && payload?.exp && redisClient.isReady) {
+            await redisClient.expireAt(`token:${token}`, payload.exp);
+            await redisClient.set(`token:${token}`, "blocked")
+        }
 
         res.cookie("token", null, { expires: new Date(Date.now()) });
         res.status(200).send("Logout successful")
@@ -127,17 +137,25 @@ export const adminRegister = async (req, res) => {
     }
 }
 
-export const check = (req, res) => {
+export const check = async (req, res) => {
+    try {
+        await resetLimitsIfNewDay(req.result);
 
-    const reply = {
-        firstName: req.result.firstName,
-        emailId: req.result.emailId,
-        _id: req.result._id,
-        role: req.result.role,
+        const reply = {
+            firstName: req.result.firstName,
+            emailId: req.result.emailId,
+            _id: req.result._id,
+            role: req.result.role,
+            mockInterviewUseLeft: req.result.mockInterviewUseLeft,
+            aiChatMsgsLeft: req.result.aiChatMsgsLeft,
+            revisionMsgsLeft: req.result.revisionMsgsLeft,
+        }
+
+        res.status(200).json({
+            user: reply,
+            message: "Valid User"
+        });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to verify auth" });
     }
-
-    res.status(200).json({
-        user: reply,
-        message: "Valid User"
-    });
 }

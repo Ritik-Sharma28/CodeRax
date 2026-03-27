@@ -4,6 +4,7 @@ import { Submission } from "../models/submission.js";
 import { runTest } from "../judge1/run.js";
 import Match from "../models/match.js";
 import { buildLeaderboard, shouldAutoCompleteMatch, completeMatch } from "../utils/matchLifecycle.js";
+import User from "../models/user.js";
 
 export const submitCode = async (req, res) => {
     try {
@@ -44,6 +45,12 @@ export const submitCode = async (req, res) => {
             testCasesPassed: result.details?.testCasesPassed || 0
 
         });
+
+        if (result.verdict === 'Accepted') {
+            await User.findByIdAndUpdate(userId, {
+                $addToSet: { problemSolved: problemId }
+            });
+        }
 
         // --- BATTLE ENGINE LOGIC ---
         try {

@@ -31,9 +31,10 @@ const userSchema = new Schema({
         enum: ["user", "admin"],
         default: 'user'
     },
-    problemSolved: {
-
-    },
+    problemSolved: [{
+        type: Schema.Types.ObjectId,
+        ref: 'problem'
+    }],
     profilePicture: {
         type: String,
         default: ""
@@ -57,6 +58,22 @@ const userSchema = new Schema({
     password: {
         type: String,
         required: true
+    },
+    mockInterviewUseLeft: {
+        type: Number,
+        default: 2
+    },
+    aiChatMsgsLeft: {
+        type: Number,
+        default: 10
+    },
+    revisionMsgsLeft: {
+        type: Number,
+        default: 5
+    },
+    lastLimitResetDate: {
+        type: Date,
+        default: Date.now
     }
 }, {
     timestamps: true

@@ -14,6 +14,7 @@ import BattleLobby from './pages/battle/BattleLobby';
 import BattleArena from './pages/battle/BattleArena';
 import BattleResults from './pages/battle/BattleResults';
 import MockInterviewPage from './pages/features/MockInterviewPage';
+import DSAVisualizerPage from './pages/visualizer/DSAVisualizerPage';
 
 function App() {
 
@@ -41,6 +42,7 @@ function App() {
         <Route path="/problem/:problemId" element={isAuthenticated ? <ProblemPage /> : <Navigate to="/login" />}></Route>
         <Route path="/revision-mentor" element={isAuthenticated ? <RevisionMentorPage /> : <Navigate to="/login" />}></Route>
         <Route path="/mock-interview" element={isAuthenticated ? <MockInterviewPage /> : <Navigate to="/login" />}></Route>
+        <Route path="/dsa-visualizer" element={isAuthenticated ? <DSAVisualizerPage /> : <Navigate to="/login" />}></Route>
         <Route path="/admin" element={isAuthenticated ? <AdminPage /> : <Navigate to="/login" />}></Route>
         <Route path="/profile" element={isAuthenticated ? <ProfilePage /> : <Navigate to="/login" />}></Route>
         <Route path="/battle-lobby" element={isAuthenticated ? <BattleLobby /> : <Navigate to="/login" />}></Route>

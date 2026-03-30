@@ -66,6 +66,14 @@ function Navbar({ darkMode, setDarkMode }) {
                         }>
                             Mock Interview
                         </NavLink>
+                        <NavLink to="/dsa-visualizer" className={({ isActive }) =>
+                            `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
+                                ? (darkMode ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-50 text-amber-700')
+                                : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
+                            }`
+                        }>
+                            DSA Visualizer
+                        </NavLink>
                         <NavLink to="/battle-lobby" className={({ isActive }) =>
                             `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
                                 ? (darkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-50 text-purple-700')
@@ -178,6 +186,13 @@ function Navbar({ darkMode, setDarkMode }) {
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.5c3.866 0 7-2.91 7-6.5s-3.134-6.5-7-6.5-7 2.91-7 6.5 3.134 6.5 7 6.5zm0 0v3m-4 0h8" />
                                             </svg>
                                             Mock Interview
+                                        </NavLink>
+                                        <NavLink to="/dsa-visualizer" onClick={() => setProfileOpen(false)}
+                                            className={`flex md:hidden items-center gap-3 px-4 py-2.5 text-sm transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
+                                            <svg className={`w-4 h-4 ${darkMode ? 'text-amber-300' : 'text-amber-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4m3-5l5-3 5 3m-10 10l5 3 5-3" />
+                                            </svg>
+                                            DSA Visualizer
                                         </NavLink>
 
                                         {user?.role === 'admin' && (

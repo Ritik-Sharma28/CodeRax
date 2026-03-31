@@ -5,6 +5,7 @@ import TestResultPanel from './TestResultPanel';
 import SubmitResultPanel from './SubmitResultPanel';
 import ActionBar from './ActionBar';
 import axiosClient from '../../services/axiosClient';
+import { Link } from 'react-router';
 
 const RIGHT_TABS = [
     { key: 'code', label: 'Code', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' },
@@ -13,6 +14,46 @@ const RIGHT_TABS = [
     { key: 'submit_result', label: 'Submit Result', icon: 'M4.5 12.75l6 6 9-13.5' },
     { key: 'notes', label: '📌 Notes', icon: 'M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z' },
 ];
+
+function LockedFeaturePanel({ darkMode, title, description }) {
+    return (
+        <div className="flex flex-1 items-center justify-center p-5">
+            <div className={`flex max-w-md flex-col items-center rounded-2xl border px-6 py-10 text-center ${
+                darkMode
+                    ? 'border-slate-700/60 bg-slate-900/70'
+                    : 'border-slate-200 bg-slate-50'
+            }`}>
+                <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${
+                    darkMode ? 'bg-indigo-500/15 text-indigo-400' : 'bg-indigo-50 text-indigo-600'
+                }`}>
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 0h10.5A1.5 1.5 0 0118.75 12v6.75a1.5 1.5 0 01-1.5 1.5H6.75a1.5 1.5 0 01-1.5-1.5V12a1.5 1.5 0 011.5-1.5z" />
+                    </svg>
+                </div>
+                <h3 className={`text-base font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{title}</h3>
+                <p className={`mt-2 text-sm leading-6 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {description}
+                </p>
+                <div className="mt-5 flex items-center gap-3">
+                    <Link
+                        to="/login"
+                        className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                            darkMode ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-100'
+                        }`}
+                    >
+                        Log In
+                    </Link>
+                    <Link
+                        to="/signup"
+                        className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-indigo-500"
+                    >
+                        Sign Up
+                    </Link>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function NotesPanel({ problemId, darkMode }) {
     const [notes, setNotes] = useState([]);
@@ -170,8 +211,10 @@ function RightPanel({
     setActiveRightTab,
     problemId,
     battleMode = false,
+    previewMode = false,
 }) {
     const availableTabs = battleMode ? RIGHT_TABS.filter((tab) => tab.key !== 'notes') : RIGHT_TABS;
+
     return (
         <div className="flex-1 flex flex-col min-h-0">
             <div className={`flex items-center gap-1 px-2 sm:px-3 py-2 border-b overflow-x-auto scrollbar-none
@@ -216,31 +259,64 @@ function RightPanel({
                         onCodeChange={onCodeChange}
                         onLanguageChange={onLanguageChange}
                         darkMode={darkMode}
+                        previewMode={previewMode}
                     />
                 )}
 
                 {activeRightTab === 'testcases' && (
-                    <CustomTestcasePanel
-                        testcases={customTestcases}
-                        setTestcases={setCustomTestcases}
-                        darkMode={darkMode}
-                    />
+                    previewMode ? (
+                        <LockedFeaturePanel
+                            darkMode={darkMode}
+                            title="Custom testcases are available after login"
+                            description="Sign in to try your own inputs and use the console/testing workflow."
+                        />
+                    ) : (
+                        <CustomTestcasePanel
+                            testcases={customTestcases}
+                            setTestcases={setCustomTestcases}
+                            darkMode={darkMode}
+                        />
+                    )
                 )}
 
                 {activeRightTab === 'test_result' && (
-                    <div className="flex-1 overflow-y-auto p-3 sm:p-5">
-                        <TestResultPanel runResult={runResult} testCases={customTestcases} darkMode={darkMode} />
-                    </div>
+                    previewMode ? (
+                        <LockedFeaturePanel
+                            darkMode={darkMode}
+                            title="Run results are available after login"
+                            description="Run the code and inspect testcase output after signing in."
+                        />
+                    ) : (
+                        <div className="flex-1 overflow-y-auto p-3 sm:p-5">
+                            <TestResultPanel runResult={runResult} testCases={customTestcases} darkMode={darkMode} />
+                        </div>
+                    )
                 )}
 
                 {activeRightTab === 'submit_result' && (
-                    <div className="flex-1 overflow-y-auto p-3 sm:p-5">
-                        <SubmitResultPanel submitResult={submitResult} darkMode={darkMode} />
-                    </div>
+                    previewMode ? (
+                        <LockedFeaturePanel
+                            darkMode={darkMode}
+                            title="Submission results are available after login"
+                            description="Sign in to submit your code and view verdicts, runtime, and memory stats."
+                        />
+                    ) : (
+                        <div className="flex-1 overflow-y-auto p-3 sm:p-5">
+                            <SubmitResultPanel submitResult={submitResult} darkMode={darkMode} />
+                        </div>
+                    )
                 )}
 
                 {activeRightTab === 'notes' && (
-                    <NotesPanel problemId={problemId} darkMode={darkMode} />
+                    previewMode ? (
+                        <LockedFeaturePanel
+                            darkMode={darkMode}
+                            title="Notes are available after login"
+                            description="Save revision notes and keep problem-specific reminders after signing in."
+                        />
+                    ) : (
+                        <NotesPanel problemId={problemId} darkMode={darkMode} />
+                    )
                 )}
             </div>
 
@@ -250,6 +326,7 @@ function RightPanel({
                 onConsole={() => setActiveRightTab('testcases')}
                 loading={loading}
                 darkMode={darkMode}
+                previewMode={previewMode}
             />
         </div>
     );

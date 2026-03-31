@@ -4,6 +4,7 @@ import SolutionsPanel from './SolutionsPanel';
 import SubmissionHistory from './SubmissionHistory';
 import ChatAI from '../chat/ChatAI';
 import Editorial from './Editorial';
+import { Link } from 'react-router';
 
 const LEFT_TABS = [
     { key: 'description', label: 'Description', icon: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z' },
@@ -13,13 +14,51 @@ const LEFT_TABS = [
     { key: 'chatAI', label: 'AI Chat', icon: 'M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z' },
 ];
 
+function LockedFeaturePanel({ darkMode, title, description }) {
+    return (
+        <div className={`mx-auto flex max-w-md flex-col items-center justify-center rounded-2xl border px-6 py-10 text-center ${
+            darkMode
+                ? 'border-slate-700/60 bg-slate-900/70'
+                : 'border-slate-200 bg-slate-50'
+        }`}>
+            <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${
+                darkMode ? 'bg-indigo-500/15 text-indigo-400' : 'bg-indigo-50 text-indigo-600'
+            }`}>
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 0h10.5A1.5 1.5 0 0118.75 12v6.75a1.5 1.5 0 01-1.5 1.5H6.75a1.5 1.5 0 01-1.5-1.5V12a1.5 1.5 0 011.5-1.5z" />
+                </svg>
+            </div>
+            <h3 className={`text-base font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{title}</h3>
+            <p className={`mt-2 text-sm leading-6 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                {description}
+            </p>
+            <div className="mt-5 flex items-center gap-3">
+                <Link
+                    to="/login"
+                    className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                        darkMode ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-100'
+                    }`}
+                >
+                    Log In
+                </Link>
+                <Link
+                    to="/signup"
+                    className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-indigo-500"
+                >
+                    Sign Up
+                </Link>
+            </div>
+        </div>
+    );
+}
 
-function LeftPanel({ problem, problemId, darkMode, code, battleMode = false }) {
+
+function LeftPanel({ problem, problemId, darkMode, code, battleMode = false, previewMode = false }) {
     const [activeTab, setActiveTab] = useState('description');
 
     const availableTabs = battleMode 
-        ? LEFT_TABS.filter(tab => tab.key === 'description' || tab.key === 'submissions')
-        : LEFT_TABS;
+            ? LEFT_TABS.filter(tab => tab.key === 'description' || tab.key === 'submissions')
+            : LEFT_TABS;
 
     return (
         <div className="flex-1 flex flex-col min-h-0">
@@ -61,21 +100,52 @@ function LeftPanel({ problem, problemId, darkMode, code, battleMode = false }) {
                         )}
 
                         {activeTab === 'editorial' && (
-                            <Editorial problemId={problemId} darkMode={darkMode} />
+                            previewMode ? (
+                                <LockedFeaturePanel
+                                    darkMode={darkMode}
+                                    title="Editorial is available after login"
+                                    description="Guests can preview the editor layout here. Sign in to unlock editorial videos and walkthroughs."
+                                />
+                            ) : (
+                                <Editorial problemId={problemId} darkMode={darkMode} />
+                            )
                         )}
 
                         {activeTab === 'solutions' && (
-                            <SolutionsPanel problem={problem} darkMode={darkMode} />
+                            previewMode ? (
+                                <LockedFeaturePanel
+                                    darkMode={darkMode}
+                                    title="Solutions are available after login"
+                                    description="Sign in to browse solution references and compare approaches for this problem."
+                                />
+                            ) : (
+                                <SolutionsPanel problem={problem} darkMode={darkMode} />
+                            )
                         )}
 
                         {activeTab === 'submissions' && (
-                            <SubmissionHistory problemId={problemId} darkMode={darkMode} />
+                            previewMode ? (
+                                <LockedFeaturePanel
+                                    darkMode={darkMode}
+                                    title="Submission history is available after login"
+                                    description="Track attempts, accepted runs, and performance stats once you log in and start solving."
+                                />
+                            ) : (
+                                <SubmissionHistory problemId={problemId} darkMode={darkMode} />
+                            )
 
                         )}
 
                         {activeTab === 'chatAI' && (
-                             <ChatAI problemId={problemId} darkMode={darkMode}  code = {code} />
-
+                            previewMode ? (
+                                <LockedFeaturePanel
+                                    darkMode={darkMode}
+                                    title="AI chat is available after login"
+                                    description="Ask for hints, debugging help, and explanations after signing in."
+                                />
+                            ) : (
+                                <ChatAI problemId={problemId} darkMode={darkMode}  code = {code} />
+                            )
                         )}
                     </>
                 )}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { useParams } from 'react-router';
 import { Group, Panel, Separator } from 'react-resizable-panels';
 import problemService from '../../services/problemService';
@@ -6,6 +7,7 @@ import submissionService from '../../services/submissionService';
 import Navbar from '../../components/Navbar';
 import LeftPanel from '../../components/problem/LeftPanel';
 import RightPanel from '../../components/problem/RightPanel';
+import ErrorState from '../../components/ui/ErrorState';
 
 function ResizeHandle({ darkMode }) {
     return (
@@ -27,11 +29,13 @@ function ResizeHandle({ darkMode }) {
 }
 
 const ProblemPage = () => {
+    const { isAuthenticated, authChecked } = useSelector((state) => state.auth);
     const [problem, setProblem] = useState(null);
     const [selectedLanguage, setSelectedLanguage] = useState('cpp');
     const [code, setCode] = useState('');
     const [loading, setLoading] = useState(false);
     const [pageLoading, setPageLoading] = useState(true);
+    const [pageError, setPageError] = useState('');
     const [runResult, setRunResult] = useState(null);
     const [submitResult, setSubmitResult] = useState(null);
     const [customTestcases, setCustomTestcases] = useState([]);
@@ -43,35 +47,45 @@ const ProblemPage = () => {
     const [mobilePanel, setMobilePanel] = useState('description');
 
     const { problemId } = useParams();
+    const previewMode = authChecked && !isAuthenticated;
 
     useEffect(() => {
         localStorage.setItem('darkMode', darkMode);
     }, [darkMode]);
 
     useEffect(() => {
+        if (!authChecked) {
+            return;
+        }
+
         const fetchProblem = async () => {
             setPageLoading(true);
+            setPageError('');
+            setProblem(null);
             try {
-                const data = await problemService.getProblemById(problemId);
-                setProblem(data);
+                const data = isAuthenticated
+                    ? await problemService.getProblemById(problemId)
+                    : await problemService.getPublicProblemById(problemId);
 
-                const startCode = data.startCode?.find(sc => sc.language === selectedLanguage);
-                if (startCode) {
-                    setCode(startCode.initialCode);
-                }
+                setProblem(data);
 
                 if (data.visibleTestCases) {
                     setCustomTestcases(data.visibleTestCases.map(tc => ({ input: tc.input })));
+                } else {
+                    setCustomTestcases([]);
                 }
             } catch (error) {
                 console.error('Error fetching problem:', error);
+                setPageError(error.message || 'We could not load this problem.');
+                setCode('');
+                setCustomTestcases([]);
             } finally {
                 setPageLoading(false);
             }
         };
 
         fetchProblem();
-    }, [problemId]);
+    }, [authChecked, isAuthenticated, problemId]);
 
     useEffect(() => {
         if (problem) {
@@ -85,6 +99,10 @@ const ProblemPage = () => {
     }, [selectedLanguage, problem]);
 
     const handleRun = async () => {
+        if (previewMode) {
+            return;
+        }
+
         setLoading(true);
         setRunResult(null);
 
@@ -113,6 +131,10 @@ const ProblemPage = () => {
     };
 
     const handleSubmitCode = async () => {
+        if (previewMode) {
+            return;
+        }
+
         setLoading(true);
         setSubmitResult(null);
 
@@ -138,7 +160,7 @@ const ProblemPage = () => {
         }
     };
 
-    if (pageLoading) {
+    if (!authChecked || pageLoading) {
         return (
             <div className={`min-h-screen flex flex-col ${darkMode ? 'bg-slate-950' : 'bg-white'}`}>
                 <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
@@ -149,6 +171,23 @@ const ProblemPage = () => {
                         <p className={`text-sm font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                             Loading problem...
                         </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (pageError || !problem) {
+        return (
+            <div className={`min-h-screen flex flex-col ${darkMode ? 'bg-slate-950' : 'bg-white'}`}>
+                <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
+                <div className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-5xl">
+                        <ErrorState
+                            title="Problem unavailable"
+                            description={pageError || 'This problem could not be found.'}
+                            darkMode={darkMode}
+                        />
                     </div>
                 </div>
             </div>
@@ -192,7 +231,7 @@ const ProblemPage = () => {
                         code={code}
                         problemId={problemId}
                         darkMode={darkMode}
-                        setSubmitResult={setSubmitResult}
+                        previewMode={previewMode}
                     />
                 </div>
                 <div className={`flex flex-col w-full md:hidden ${mobilePanel === 'code' ? 'flex' : 'hidden'}`}>
@@ -212,6 +251,7 @@ const ProblemPage = () => {
                             activeRightTab={activeRightTab}
                             setActiveRightTab={setActiveRightTab}
                             problemId={problem?._id}
+                            previewMode={previewMode}
                         />
                 </div>
 
@@ -225,7 +265,7 @@ const ProblemPage = () => {
                                     code={code}
                                     problemId={problemId}
                                     darkMode={darkMode}
-                                    setSubmitResult={setSubmitResult}
+                                    previewMode={previewMode}
                                 />
                             </div>
                         </Panel>
@@ -248,6 +288,7 @@ const ProblemPage = () => {
                                     activeRightTab={activeRightTab}
                                     setActiveRightTab={setActiveRightTab}
                                     problemId={problem?._id}
+                                    previewMode={previewMode}
                                 />
                             </div>
                         </Panel>

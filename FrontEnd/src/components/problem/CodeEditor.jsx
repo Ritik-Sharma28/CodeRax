@@ -7,7 +7,7 @@ const LANGUAGES = [
     { key: 'python', label: 'Python' },
 ];
 
-function CodeEditor({ code, selectedLanguage, onCodeChange, onLanguageChange, darkMode }) {
+function CodeEditor({ code, selectedLanguage, onCodeChange, onLanguageChange, darkMode, previewMode = false }) {
     const editorRef = useRef(null);
 
     const handleEditorDidMount = (editor) => {
@@ -75,7 +75,7 @@ function CodeEditor({ code, selectedLanguage, onCodeChange, onLanguageChange, da
                         renderLineHighlight: 'line',
                         selectOnLineNumbers: true,
                         roundedSelection: false,
-                        readOnly: false,
+                        readOnly: previewMode,
                         cursorStyle: 'line',
                         mouseWheelZoom: true,
                         padding: { top: 12, bottom: 12 },

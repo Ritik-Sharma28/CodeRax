@@ -74,6 +74,9 @@ app.use("/problem", problemRouter)
 app.use("/submission",submitRouter);
 app.use('/ai',AIRouter);
 app.use("/video" , videoRouter)
+app.get("/ping", (req, res) => {
+  res.status(200).send("Server is awake");
+});
 
 
 

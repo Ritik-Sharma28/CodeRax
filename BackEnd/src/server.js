@@ -22,9 +22,28 @@ import { contentRouter } from "./routes/content.js";
 
 const app = express();
 const server = http.createServer(app);
+const PORT = Number(process.env.PORT) || 3000;
+const allowedOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  return allowedOrigins.includes(origin);
+};
+
+const corsOriginHandler = (origin, callback) => {
+  if (isOriginAllowed(origin)) {
+    return callback(null, true);
+  }
+
+  return callback(new Error(`CORS blocked for origin: ${origin}`));
+};
+
 const io = new Server(server, {
   cors: {
-    origin: (origin, callback) => callback(null, true),
+    origin: corsOriginHandler,
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -32,11 +51,12 @@ const io = new Server(server, {
 setupSocket(io);
 
 app.use(cors({
-    origin: (origin, callback) => callback(null, true),
+    origin: corsOriginHandler,
     credentials: true 
 }))
 
 
+app.use("/video/webhook", express.raw({ type: "application/json" }));
 app.use(express.json())
 app.use(cookieParser())
 
@@ -73,8 +93,8 @@ const serverConnect = async () => {
     // Start matched worker
     initMatchmaker(io);
 
-    server.listen(process.env.PORT, () => {
-      console.log(`Listening at Port ${process.env.PORT}...`)
+    server.listen(PORT, () => {
+      console.log(`Listening at Port ${PORT}...`)
     })
   } catch (err) {
     console.log(err)

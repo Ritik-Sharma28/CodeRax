@@ -1,10 +1,19 @@
 import { validate } from "../utils/validate.js";
 import User from "../models/user.js";
+import { Submission } from "../models/submission.js";
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import { redisClient } from "../config/redis.js"
 import { resetLimitsIfNewDay } from "../utils/rateLimits.js";
 
+const isProduction = process.env.NODE_ENV === "production";
+
+const buildAuthCookieOptions = (maxAge) => ({
+    httpOnly: true,
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction,
+    maxAge
+});
 
 export const register = async (req, res) => {
     try {
@@ -31,7 +40,7 @@ export const register = async (req, res) => {
             aiChatMsgsLeft: user.aiChatMsgsLeft,
             revisionMsgsLeft: user.revisionMsgsLeft,
         }
-        res.cookie("token", token, { maxAge: 60 * 60 * 1000 })
+        res.cookie("token", token, buildAuthCookieOptions(60 * 60 * 1000))
 
         res.status(201).json({
             user: reply,
@@ -72,7 +81,7 @@ export const login = async (req, res) => {
         }
 
         const token = jwt.sign({ _id: user._id, emailId: emailId, role: user.role }, process.env.JWT_SECRET, { expiresIn: 60 * 60 });
-        res.cookie('token', token, { maxAge: 60 * 60 * 1000 });
+        res.cookie('token', token, buildAuthCookieOptions(60 * 60 * 1000));
         res.status(201).json({
             user: reply,
             message: "Loggin Successfully"
@@ -93,7 +102,10 @@ export const logout = async (req, res) => {
             await redisClient.set(`token:${token}`, "blocked")
         }
 
-        res.cookie("token", null, { expires: new Date(Date.now()) });
+        res.cookie("token", "", {
+            ...buildAuthCookieOptions(0),
+            expires: new Date(0)
+        });
         res.status(200).send("Logout successful")
     } catch (err) {
         res.status(503).send("Error: " + err);
@@ -135,7 +147,7 @@ export const adminRegister = async (req, res) => {
         const user = await User.create(req.body)
 
         const token = jwt.sign({ emailId, _id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: 60 * 60 * 24 })
-        res.cookie("token", token, { maxAge: 60 * 60 * 1000 })
+        res.cookie("token", token, buildAuthCookieOptions(60 * 60 * 1000))
 
         res.status(201).send("user register successfully")
     } catch (error) {

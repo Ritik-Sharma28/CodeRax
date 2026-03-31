@@ -1,11 +1,8 @@
 import axios from "axios"
-
-const backendUrl = window.location.hostname === 'localhost' 
-    ? 'http://localhost:3000' 
-    : `http://${window.location.hostname}:3000`;
+import { getApiBaseUrl } from "./apiBaseUrl";
 
 const axiosClient =  axios.create({
-    baseURL: backendUrl,
+    baseURL: getApiBaseUrl(),
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json'

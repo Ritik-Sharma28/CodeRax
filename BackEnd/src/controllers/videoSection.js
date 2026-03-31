@@ -1,6 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
 import Problem from "../models/problem.js";
-import User from "../models/user.js";
 import { SolutionVideo } from "../models/solutionVideo.js";
 
 cloudinary.config({
@@ -65,7 +64,11 @@ export const handleCloudinaryWebhook = async (req, res) => {
       return res.status(401).send('Missing signature headers');
     }
 
-    const bodyString = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    const bodyString = Buffer.isBuffer(req.body)
+      ? req.body.toString('utf8')
+      : typeof req.body === 'string'
+        ? req.body
+        : JSON.stringify(req.body);
 
     const isValid = cloudinary.utils.verifyNotificationSignature(
       bodyString,
@@ -78,7 +81,11 @@ export const handleCloudinaryWebhook = async (req, res) => {
       return res.status(401).send('Invalid webhook signature');
     }
 
-    const { notification_type, public_id, secure_url, duration, eager } = req.body;
+    const payload = Buffer.isBuffer(req.body) || typeof req.body === 'string'
+      ? JSON.parse(bodyString)
+      : req.body;
+
+    const { notification_type, public_id, secure_url, duration, eager } = payload;
 
     if (notification_type !== 'upload' && notification_type !== 'eager') {
       return res.status(200).send('Event ignored');

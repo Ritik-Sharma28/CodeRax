@@ -52,9 +52,7 @@ function Login() {
                     <section className="relative flex h-full flex-col justify-between p-8 text-white xl:p-12">
                         <div>
                             <NavLink to="/" className="inline-flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-cyan-500 text-sm font-black text-white">
-                                    CR
-                                </div>
+                                <img src="/coderax_logo.png" alt="CodeRax Logo" className="h-10 w-10 rounded-2xl object-cover" />
                                 <BrandWordmark darkMode compact />
                             </NavLink>
                             <p className="mt-10 text-xs font-bold uppercase tracking-[0.28em] text-indigo-300">Back to the arena</p>
@@ -84,9 +82,7 @@ function Login() {
                 <section className="flex items-center justify-center">
                     <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_35px_120px_-65px_rgba(15,23,42,0.25)] sm:p-8 lg:p-9">
                         <NavLink to="/" className="inline-flex items-center gap-3 lg:hidden">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-cyan-500 text-sm font-black text-white">
-                                CR
-                            </div>
+                            <img src="/coderax_logo.png" alt="CodeRax Logo" className="h-10 w-10 rounded-2xl object-cover" />
                             <BrandWordmark darkMode={false} compact />
                         </NavLink>
 

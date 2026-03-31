@@ -41,9 +41,9 @@ function Footer({ darkMode }) {
                 <div>
                     <p className={headingClass}>Contact</p>
                     <div className="mt-3 flex flex-col gap-2">
-                        <a className={linkClass} href="mailto:coderax.team@gmail.com">coderax.team@gmail.com</a>
-                        <a className={linkClass} href="https://github.com/" target="_blank" rel="noreferrer">GitHub</a>
-                        <a className={linkClass} href="https://www.linkedin.com/" target="_blank" rel="noreferrer">LinkedIn</a>
+                        <a className={linkClass} href="mailto:ritiksharma.14y@gmail.com">coderax.team@gmail.com</a>
+                        <a className={linkClass} href="https://github.com/Ritik-Sharma28" target="_blank" rel="noreferrer">GitHub</a>
+                        <a className={linkClass} href="https://www.linkedin.com/in/ritik-sharma-295536331/" target="_blank" rel="noreferrer">LinkedIn</a>
                     </div>
                 </div>
             </div>

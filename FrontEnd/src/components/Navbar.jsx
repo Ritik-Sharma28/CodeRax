@@ -45,9 +45,7 @@ function Navbar({ darkMode, setDarkMode }) {
         <header className={`sticky top-0 z-50 border-b backdrop-blur-xl ${darkMode ? "border-slate-800 bg-slate-950/85" : "border-slate-200 bg-white/85"}`}>
             <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:h-[74px] lg:px-8">
                 <NavLink to="/" className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-cyan-500 to-fuchsia-600 text-sm font-black text-white shadow-lg shadow-cyan-500/20">
-                        CR
-                    </div>
+                    <img src="/coderax_logo.png" alt="CodeRax Logo" className="h-10 w-10 rounded-2xl object-cover shadow-lg shadow-cyan-500/20" />
                     <div>
                         <BrandWordmark darkMode={darkMode} compact />
                         <p className={`hidden text-[10px] font-bold uppercase tracking-[0.18em] sm:block ${darkMode ? "text-slate-500" : "text-slate-400"}`}>

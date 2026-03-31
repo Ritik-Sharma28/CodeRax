@@ -3,12 +3,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchAllProblems } from '../../services/slices/problemsSlice';
 import axiosClient from '../../services/axiosClient';
 import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
 import StatsGrid from '../../components/problem/StatsGrid';
 import FilterBar from '../../components/problem/FilterBar';
 import ProblemTable from '../../components/problem/ProblemTable';
+import { useThemeMode } from '../../context/ThemeContext';
 
 function Homepage() {
     const dispatch = useDispatch();
+    const { darkMode, setDarkMode } = useThemeMode();
     const { user } = useSelector((state) => state.auth);
     const { problemIndex: problems, status } = useSelector((state) => state.problems);
     const [solvedProblems, setSolvedProblems] = useState([]);
@@ -16,13 +19,6 @@ function Homepage() {
     const [search, setSearch] = useState('');
     const [difficultyFilter, setDifficultyFilter] = useState('all');
     const [tagFilter, setTagFilter] = useState('all');
-    const [darkMode, setDarkMode] = useState(() => {
-        return localStorage.getItem('darkMode') === 'true';
-    });
-
-    useEffect(() => {
-        localStorage.setItem('darkMode', darkMode);
-    }, [darkMode]);
 
     useEffect(() => {
         if (status === 'idle') {
@@ -62,21 +58,21 @@ function Homepage() {
     const hardCount = problems.filter(p => p.difficulty === 'hard').length;
 
     return (
-        <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-gradient-to-br from-slate-50 via-white to-indigo-50/30'}`}>
+        <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-[#f8f9fc]'}`}>
             <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
 
             {/* Background effects */}
             <div className={`fixed top-[-20%] right-[-10%] w-[40vw] h-[40vw] rounded-full blur-[100px] pointer-events-none ${darkMode ? 'bg-indigo-500/5' : 'bg-indigo-400/5'}`} />
             <div className={`fixed bottom-[-15%] left-[-5%] w-[35vw] h-[35vw] rounded-full blur-[80px] pointer-events-none ${darkMode ? 'bg-purple-500/5' : 'bg-purple-400/5'}`} />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative z-10">
 
                 {/* Welcome */}
-                <div className="mb-8">
-                    <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                        Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500">{user?.firstName || 'Coder'}</span>
+                <div className="mb-6 sm:mb-8">
+                    <h1 className={`text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                        Welcome back, <span className="gradient-text">{user?.firstName || 'Coder'}</span>
                     </h1>
-                    <p className={`mt-1 text-sm sm:text-base ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Track your progress and keep solving.</p>
+                    <p className={`mt-1 text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Track your progress and keep solving.</p>
                 </div>
 
                 {/* Stats Cards */}
@@ -91,7 +87,7 @@ function Homepage() {
                 />
 
                 {/* Tabs + Search + Filters Row */}
-                <div className="flex flex-col gap-4 mb-6">
+                <div className="flex flex-col gap-3 sm:gap-4 mb-5 sm:mb-6">
                     {/* Tabs Row */}
                     <div className="flex items-center gap-2 flex-wrap">
                         {[
@@ -101,7 +97,7 @@ function Homepage() {
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200
+                                className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200
                                     ${activeTab === tab.key
                                         ? (darkMode
                                             ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 shadow-sm'
@@ -144,6 +140,8 @@ function Homepage() {
                     darkMode={darkMode}
                 />
             </div>
+
+            <Footer darkMode={darkMode} />
         </div>
     );
 }

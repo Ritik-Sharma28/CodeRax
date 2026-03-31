@@ -1,10 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
+import { Group, Panel, Separator } from 'react-resizable-panels';
 import problemService from '../../services/problemService';
 import submissionService from '../../services/submissionService';
 import Navbar from '../../components/Navbar';
 import LeftPanel from '../../components/problem/LeftPanel';
 import RightPanel from '../../components/problem/RightPanel';
+
+function ResizeHandle({ darkMode }) {
+    return (
+        <Separator className="group relative hidden md:flex w-[6px] items-center justify-center">
+            {/* Visible bar */}
+            <div className={`absolute inset-y-0 w-[6px] transition-colors duration-150 ${
+                darkMode
+                    ? 'bg-slate-800 group-hover:bg-indigo-500/40 group-active:bg-indigo-500/60'
+                    : 'bg-slate-200 group-hover:bg-indigo-300/60 group-active:bg-indigo-400/70'
+            }`} />
+            {/* Grab dots */}
+            <div className="relative z-10 flex flex-col gap-[3px] opacity-0 transition-opacity group-hover:opacity-100">
+                {[0, 1, 2].map((i) => (
+                    <div key={i} className={`h-[3px] w-[3px] rounded-full ${darkMode ? 'bg-slate-500' : 'bg-slate-400'}`} />
+                ))}
+            </div>
+        </Separator>
+    );
+}
 
 const ProblemPage = () => {
     const [problem, setProblem] = useState(null);
@@ -16,21 +36,18 @@ const ProblemPage = () => {
     const [submitResult, setSubmitResult] = useState(null);
     const [customTestcases, setCustomTestcases] = useState([]);
     const [activeRightTab, setActiveRightTab] = useState('code');
+    
     const [darkMode, setDarkMode] = useState(() => {
-        return localStorage.getItem('darkMode') === 'true';
+        return localStorage.getItem('darkMode') !== 'false';
     });
-
-    // Mobile panel toggle: 'description' or 'code'
     const [mobilePanel, setMobilePanel] = useState('description');
 
     const { problemId } = useParams();
 
-    // Persist dark mode
     useEffect(() => {
         localStorage.setItem('darkMode', darkMode);
     }, [darkMode]);
 
-    // Fetch problem on mount
     useEffect(() => {
         const fetchProblem = async () => {
             setPageLoading(true);
@@ -56,7 +73,6 @@ const ProblemPage = () => {
         fetchProblem();
     }, [problemId]);
 
-    // Update code when language changes
     useEffect(() => {
         if (problem) {
             const startCode = problem.startCode?.find(sc => sc.language === selectedLanguage);
@@ -68,11 +84,6 @@ const ProblemPage = () => {
         }
     }, [selectedLanguage, problem]);
 
-    /**
-     * Run Code
-     * POST /submission/run/:id
-     * Body: { code, language, input }
-     */
     const handleRun = async () => {
         setLoading(true);
         setRunResult(null);
@@ -101,11 +112,6 @@ const ProblemPage = () => {
         }
     };
 
-    /**
-     * Submit Code
-     * POST /submission/submit/:id
-     * Body: { code, language }
-     */
     const handleSubmitCode = async () => {
         setLoading(true);
         setSubmitResult(null);
@@ -132,7 +138,6 @@ const ProblemPage = () => {
         }
     };
 
-    // Loading state
     if (pageLoading) {
         return (
             <div className={`min-h-screen flex flex-col ${darkMode ? 'bg-slate-950' : 'bg-white'}`}>
@@ -152,10 +157,9 @@ const ProblemPage = () => {
 
     return (
         <div className={`h-screen flex flex-col transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-white'}`}>
-            {/* Navbar */}
             <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
 
-            {/* Mobile Panel Switcher - visible only on small screens */}
+            {/* Mobile tab switcher */}
             <div className={`flex md:hidden border-b ${darkMode ? 'bg-slate-900 border-slate-700/60' : 'bg-slate-50 border-slate-200/60'}`}>
                 <button
                     onClick={() => setMobilePanel('description')}
@@ -179,14 +183,10 @@ const ProblemPage = () => {
                 </button>
             </div>
 
-            {/* Main Content - Split Panels (desktop) / Single Panel (mobile) */}
+            {/* Desktop: resizable panels | Mobile: tab-based */}
             <div className="flex-1 flex min-h-0">
-                {/* Left Panel - always visible on md+, toggled on mobile */}
-                <div className={`flex flex-col border-r
-                    ${darkMode ? 'border-slate-700/60' : 'border-slate-200/60'}
-                    w-full md:w-1/2
-                    ${mobilePanel === 'description' ? 'flex' : 'hidden md:flex'}
-                `}>
+                {/* Mobile fallback — same tab layout as before */}
+                <div className={`flex flex-col w-full md:hidden ${mobilePanel === 'description' ? 'flex' : 'hidden'}`}>
                     <LeftPanel
                         problem={problem}
                         code={code}
@@ -195,29 +195,63 @@ const ProblemPage = () => {
                         setSubmitResult={setSubmitResult}
                     />
                 </div>
+                <div className={`flex flex-col w-full md:hidden ${mobilePanel === 'code' ? 'flex' : 'hidden'}`}>
+                        <RightPanel
+                            code={code}
+                            selectedLanguage={selectedLanguage}
+                            onCodeChange={setCode}
+                            onLanguageChange={setSelectedLanguage}
+                            onRun={handleRun}
+                            onSubmit={handleSubmitCode}
+                            loading={loading}
+                            runResult={runResult}
+                            submitResult={submitResult}
+                            customTestcases={customTestcases}
+                            setCustomTestcases={setCustomTestcases}
+                            darkMode={darkMode}
+                            activeRightTab={activeRightTab}
+                            setActiveRightTab={setActiveRightTab}
+                            problemId={problem?._id}
+                        />
+                </div>
 
-                {/* Right Panel - always visible on md+, toggled on mobile */}
-                <div className={`flex flex-col
-                    w-full md:w-1/2
-                    ${mobilePanel === 'code' ? 'flex' : 'hidden md:flex'}
-                `}>
-                    <RightPanel
-                        code={code}
-                        selectedLanguage={selectedLanguage}
-                        onCodeChange={setCode}
-                        onLanguageChange={setSelectedLanguage}
-                        onRun={handleRun}
-                        onSubmit={handleSubmitCode}
-                        loading={loading}
-                        runResult={runResult}
-                        submitResult={submitResult}
-                        customTestcases={customTestcases}
-                        setCustomTestcases={setCustomTestcases}
-                        darkMode={darkMode}
-                        activeRightTab={activeRightTab}
-                        setActiveRightTab={setActiveRightTab}
-                        problemId={problem?._id}
-                    />
+                {/* Desktop: resizable panel group */}
+                <div className="hidden md:flex flex-1 min-h-0">
+                    <Group direction="horizontal" autoSaveId="problem-panels">
+                        <Panel defaultSize={45} minSize={25} order={1}>
+                            <div className={`flex flex-col h-full border-r ${darkMode ? 'border-slate-700/60' : 'border-slate-200/60'}`}>
+                                <LeftPanel
+                                    problem={problem}
+                                    code={code}
+                                    problemId={problemId}
+                                    darkMode={darkMode}
+                                    setSubmitResult={setSubmitResult}
+                                />
+                            </div>
+                        </Panel>
+                        <ResizeHandle darkMode={darkMode} />
+                        <Panel defaultSize={55} minSize={25} order={2}>
+                            <div className="flex flex-col h-full">
+                                <RightPanel
+                                    code={code}
+                                    selectedLanguage={selectedLanguage}
+                                    onCodeChange={setCode}
+                                    onLanguageChange={setSelectedLanguage}
+                                    onRun={handleRun}
+                                    onSubmit={handleSubmitCode}
+                                    loading={loading}
+                                    runResult={runResult}
+                                    submitResult={submitResult}
+                                    customTestcases={customTestcases}
+                                    setCustomTestcases={setCustomTestcases}
+                                    darkMode={darkMode}
+                                    activeRightTab={activeRightTab}
+                                    setActiveRightTab={setActiveRightTab}
+                                    problemId={problem?._id}
+                                />
+                            </div>
+                        </Panel>
+                    </Group>
                 </div>
             </div>
         </div>

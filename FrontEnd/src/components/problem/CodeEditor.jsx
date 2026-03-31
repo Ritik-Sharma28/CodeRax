@@ -25,7 +25,6 @@ function CodeEditor({ code, selectedLanguage, onCodeChange, onLanguageChange, da
 
     return (
         <div className="flex-1 flex flex-col min-h-0">
-            {/* Language Selector Bar */}
             <div className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2.5 border-b overflow-x-auto scrollbar-none
                 ${darkMode
                     ? 'bg-slate-800/80 border-slate-700/60'
@@ -51,7 +50,6 @@ function CodeEditor({ code, selectedLanguage, onCodeChange, onLanguageChange, da
                 ))}
             </div>
 
-            {/* Monaco Editor */}
             <div className="flex-1 min-h-0">
                 <Editor
                     height="100%"

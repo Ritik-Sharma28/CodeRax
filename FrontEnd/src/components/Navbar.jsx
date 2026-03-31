@@ -1,226 +1,186 @@
-import { useState, useEffect } from 'react';
-import { NavLink } from 'react-router';
-import { useDispatch, useSelector } from 'react-redux';
-import { logoutUser } from '../services/slices/authSlice';
+import { useMemo, useState } from "react";
+import { NavLink } from "react-router";
+import { useDispatch, useSelector } from "react-redux";
+import { logoutUser } from "../services/slices/authSlice";
+import BrandWordmark from "./brand/BrandWordmark";
+
+const guestLinks = [
+    { to: "/problems", label: "Problems", activeDark: "bg-indigo-500/20 text-indigo-300", activeLight: "bg-indigo-50 text-indigo-700" },
+    { to: "/revision-mentor", label: "Revision AI", activeDark: "bg-emerald-500/20 text-emerald-300", activeLight: "bg-emerald-50 text-emerald-700" },
+    { to: "/mock-interview", label: "Mock Interview", activeDark: "bg-cyan-500/20 text-cyan-300", activeLight: "bg-cyan-50 text-cyan-700" },
+    { to: "/dsa-visualizer", label: "Visualizer", activeDark: "bg-amber-500/20 text-amber-300", activeLight: "bg-amber-50 text-amber-700" },
+    { to: "/battle-lobby", label: "Arena", activeDark: "bg-fuchsia-500/20 text-fuchsia-300", activeLight: "bg-fuchsia-50 text-fuchsia-700" },
+];
+
+const authedLinks = [
+    { to: "/", label: "Home", activeDark: "bg-slate-100/10 text-white", activeLight: "bg-slate-900 text-white" },
+    ...guestLinks,
+];
 
 function Navbar({ darkMode, setDarkMode }) {
     const dispatch = useDispatch();
-    const { user } = useSelector((state) => state.auth);
+    const { isAuthenticated, user } = useSelector((state) => state.auth);
+    const [menuOpen, setMenuOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    const links = useMemo(() => (isAuthenticated ? authedLinks : guestLinks), [isAuthenticated]);
+
+    const buildNavClass = (link) => ({ isActive }) =>
+        `rounded-xl px-3 py-2 text-sm font-semibold transition ${
+            isActive
+                ? darkMode
+                    ? link.activeDark
+                    : link.activeLight
+                : darkMode
+                ? "text-slate-400 hover:bg-slate-800 hover:text-white"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        }`;
 
     const handleLogout = () => {
         dispatch(logoutUser());
         setProfileOpen(false);
+        setMenuOpen(false);
     };
 
     return (
-        <nav className={`sticky top-0 z-50 w-full border-b transition-colors duration-300
-            ${darkMode
-                ? 'bg-slate-900/80 border-slate-700/60 backdrop-blur-xl'
-                : 'bg-white/80 border-slate-200/60 backdrop-blur-xl'
-            }`}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-16">
+        <header className={`sticky top-0 z-50 border-b backdrop-blur-xl ${darkMode ? "border-slate-800 bg-slate-950/85" : "border-slate-200 bg-white/85"}`}>
+            <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:h-[74px] lg:px-8">
+                <NavLink to="/" className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-cyan-500 to-fuchsia-600 text-sm font-black text-white shadow-lg shadow-cyan-500/20">
+                        CR
+                    </div>
+                    <div>
+                        <BrandWordmark darkMode={darkMode} compact />
+                        <p className={`hidden text-[10px] font-bold uppercase tracking-[0.18em] sm:block ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
+                            DSA · AI · Arena
+                        </p>
+                    </div>
+                </NavLink>
 
-                    {/* Logo */}
-                    <NavLink to="/" className="flex items-center gap-2.5 group">
-                        <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center shadow-md shadow-indigo-600/25 group-hover:shadow-lg group-hover:shadow-indigo-600/30 transition-shadow">
-                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                <nav className="hidden items-center gap-1 lg:flex">
+                    {links.map((link) => (
+                        <NavLink key={link.to} to={link.to} className={buildNavClass(link)}>
+                            {link.label}
+                        </NavLink>
+                    ))}
+                </nav>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setDarkMode(!darkMode)}
+                        className={`rounded-xl p-2 transition ${darkMode ? "bg-slate-800 text-amber-300 hover:bg-slate-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                    >
+                        {darkMode ? (
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m12.364 6.364l-.707-.707M7.343 7.343l-.707-.707m12.728 0l-.707.707M7.343 16.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                             </svg>
-                        </div>
-                        <span className={`text-lg font-bold transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>LeetCode</span>
-                    </NavLink>
-
-                    {/* Desktop Nav Links */}
-                    <div className="hidden md:flex items-center gap-1">
-                        <NavLink to="/" className={({ isActive }) =>
-                            `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                                ? (darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-700')
-                                : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
-                            }`
-                        }>
-                            Home
-                        </NavLink>
-                        <NavLink to="/problems" className={({ isActive }) =>
-                            `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                                ? (darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-700')
-                                : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
-                            }`
-                        }>
-                            Problems
-                        </NavLink>
-                        <NavLink to="/revision-mentor" className={({ isActive }) =>
-                            `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                                ? (darkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-700')
-                                : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
-                            }`
-                        }>
-                            Revision AI
-                        </NavLink>
-                        <NavLink to="/mock-interview" className={({ isActive }) =>
-                            `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                                ? (darkMode ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-50 text-cyan-700')
-                                : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
-                            }`
-                        }>
-                            Mock Interview
-                        </NavLink>
-                        <NavLink to="/dsa-visualizer" className={({ isActive }) =>
-                            `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                                ? (darkMode ? 'bg-amber-500/20 text-amber-300' : 'bg-amber-50 text-amber-700')
-                                : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
-                            }`
-                        }>
-                            DSA Visualizer
-                        </NavLink>
-                        <NavLink to="/battle-lobby" className={({ isActive }) =>
-                            `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                                ? (darkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-50 text-purple-700')
-                                : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
-                            }`
-                        }>
-                            DSA Arena
-                        </NavLink>
-                        {user?.role === 'admin' && (
-                            <NavLink to="/admin" className={({ isActive }) =>
-                                `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                                    ? (darkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-700')
-                                    : (darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')
-                                }`
-                            }>
-                                Admin
-                            </NavLink>
+                        ) : (
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
                         )}
-                    </div>
+                    </button>
 
-                    {/* Right Side */}
-                    <div className="flex items-center gap-2">
-                        {/* Dark Mode Toggle */}
-                        <button
-                            onClick={() => setDarkMode(!darkMode)}
-                            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300
-                                ${darkMode
-                                    ? 'bg-slate-800 hover:bg-slate-700 text-yellow-400'
-                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                                }`}
-                            title={darkMode ? 'Light mode' : 'Dark mode'}
-                        >
-                            {darkMode ? (
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                                </svg>
-                            ) : (
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                                </svg>
-                            )}
-                        </button>
-
-                        {/* Profile Dropdown */}
-                        <div className="relative">
-                            <button
-                                onClick={() => setProfileOpen(!profileOpen)}
-                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors
-                                    ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}
+                    {!isAuthenticated ? (
+                        <div className="hidden items-center gap-2 sm:flex">
+                            <NavLink
+                                to="/login"
+                                className={`rounded-xl px-4 py-2 text-sm font-bold transition ${darkMode ? "text-slate-200 hover:bg-slate-800" : "text-slate-700 hover:bg-slate-100"}`}
                             >
-                                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-sm font-bold shadow-sm">
-                                    {user?.firstName?.charAt(0)?.toUpperCase() || 'U'}
-                                </div>
-                                <span className={`hidden sm:block text-sm font-semibold ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                                    {user?.firstName}
-                                </span>
-                                <svg className={`hidden sm:block w-4 h-4 transition-transform ${profileOpen ? 'rotate-180' : ''} ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
-
-                            {profileOpen && (
-                                <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
-                                    <div className={`absolute right-0 mt-2 w-56 rounded-xl shadow-xl border py-2 z-50
-                                        ${darkMode
-                                            ? 'bg-slate-800 border-slate-700'
-                                            : 'bg-white border-slate-200/80'
-                                        }`}>
-                                        <div className={`px-4 py-3 border-b ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
-                                            <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{user?.firstName}</p>
-                                            <p className={`text-xs mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{user?.emailId}</p>
-                                        </div>
-                                        
-                                        {/* Profile link (Visible on both desktop & mobile in dropdown) */}
-                                        <NavLink to="/profile" onClick={() => setProfileOpen(false)}
-                                            className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
-                                            <svg className={`w-4 h-4 ${darkMode ? 'text-blue-400' : 'text-blue-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                            </svg>
-                                            My Profile
-                                        </NavLink>
-
-                                        {/* Mobile Only Nav Links */}
-                                        <NavLink to="/battle-lobby" onClick={() => setProfileOpen(false)}
-                                            className={`flex md:hidden items-center gap-3 px-4 py-2.5 text-sm transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
-                                            <svg className={`w-4 h-4 ${darkMode ? 'text-purple-400' : 'text-purple-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                            </svg>
-                                            DSA Arena
-                                        </NavLink>
-
-                                        <NavLink to="/problems" onClick={() => setProfileOpen(false)}
-                                            className={`flex md:hidden items-center gap-3 px-4 py-2.5 text-sm transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
-                                            <svg className={`w-4 h-4 ${darkMode ? 'text-indigo-400' : 'text-indigo-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                                            </svg>
-                                            Problems
-                                        </NavLink>
-                                        <NavLink to="/revision-mentor" onClick={() => setProfileOpen(false)}
-                                            className={`flex md:hidden items-center gap-3 px-4 py-2.5 text-sm transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
-                                            <svg className={`w-4 h-4 ${darkMode ? 'text-emerald-400' : 'text-emerald-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.62 48.62 0 0112 20.904a48.62 48.62 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.636 50.636 0 00-2.658-.813A59.906 59.906 0 0112 3.493a59.903 59.903 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
-                                            </svg>
-                                            Revision AI
-                                        </NavLink>
-                                        <NavLink to="/mock-interview" onClick={() => setProfileOpen(false)}
-                                            className={`flex md:hidden items-center gap-3 px-4 py-2.5 text-sm transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
-                                            <svg className={`w-4 h-4 ${darkMode ? 'text-cyan-300' : 'text-cyan-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.5c3.866 0 7-2.91 7-6.5s-3.134-6.5-7-6.5-7 2.91-7 6.5 3.134 6.5 7 6.5zm0 0v3m-4 0h8" />
-                                            </svg>
-                                            Mock Interview
-                                        </NavLink>
-                                        <NavLink to="/dsa-visualizer" onClick={() => setProfileOpen(false)}
-                                            className={`flex md:hidden items-center gap-3 px-4 py-2.5 text-sm transition-colors ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
-                                            <svg className={`w-4 h-4 ${darkMode ? 'text-amber-300' : 'text-amber-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4m3-5l5-3 5 3m-10 10l5 3 5-3" />
-                                            </svg>
-                                            DSA Visualizer
-                                        </NavLink>
-
-                                        {user?.role === 'admin' && (
-                                            <NavLink to="/admin" onClick={() => setProfileOpen(false)}
-                                                className={`flex items-center gap-3 px-4 py-2.5 text-sm md:hidden
-                                                    ${darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-700 hover:bg-slate-50'}`}>
-                                                <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                </svg>
-                                                Admin Panel
-                                            </NavLink>
-                                        )}
-                                        <button onClick={handleLogout}
-                                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors border-t border-slate-200 dark:border-slate-700">
-                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                            </svg>
-                                            Log out
-                                        </button>
-                                    </div>
-                                </>
-                            )}
+                                Log In
+                            </NavLink>
+                            <NavLink to="/signup" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-800">
+                                Sign Up
+                            </NavLink>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="relative hidden sm:block">
+                            <button
+                                onClick={() => setProfileOpen((value) => !value)}
+                                className={`flex items-center gap-3 rounded-2xl px-3 py-2 transition ${darkMode ? "hover:bg-slate-800" : "hover:bg-slate-100"}`}
+                            >
+                                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-indigo-500 to-cyan-600 text-sm font-black text-white">
+                                    {user?.profilePicture ? (
+                                        <img src={user.profilePicture} alt={user?.firstName || "Profile"} className="h-full w-full object-cover" />
+                                    ) : (
+                                        <span>{user?.firstName?.charAt(0)?.toUpperCase() || "U"}</span>
+                                    )}
+                                </div>
+                                <div className="text-left">
+                                    <p className={`text-sm font-bold ${darkMode ? "text-slate-200" : "text-slate-800"}`}>{user?.firstName || "Coder"}</p>
+                                    <p className={`text-[11px] ${darkMode ? "text-slate-500" : "text-slate-400"}`}>{user?.rank || "Member"}</p>
+                                </div>
+                            </button>
+                            {profileOpen ? (
+                                <div className={`absolute right-0 mt-2 w-60 rounded-[24px] border p-2 shadow-xl ${darkMode ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-white"}`}>
+                                    <NavLink to="/profile" onClick={() => setProfileOpen(false)} className={buildNavClass({ activeDark: "bg-slate-800 text-white", activeLight: "bg-slate-100 text-slate-900" })}>
+                                        Profile
+                                    </NavLink>
+                                    {user?.role === "admin" ? (
+                                        <NavLink to="/admin" onClick={() => setProfileOpen(false)} className={buildNavClass({ activeDark: "bg-slate-800 text-white", activeLight: "bg-slate-100 text-slate-900" })}>
+                                            Admin
+                                        </NavLink>
+                                    ) : null}
+                                    <button
+                                        onClick={handleLogout}
+                                        className={`mt-2 w-full rounded-xl px-3 py-2 text-left text-sm font-bold transition ${darkMode ? "text-rose-300 hover:bg-rose-500/10" : "text-rose-600 hover:bg-rose-50"}`}
+                                    >
+                                        Log out
+                                    </button>
+                                </div>
+                            ) : null}
+                        </div>
+                    )}
+
+                    <button
+                        onClick={() => setMenuOpen((value) => !value)}
+                        className={`rounded-xl p-2 transition lg:hidden ${darkMode ? "bg-slate-800 text-slate-200" : "bg-slate-100 text-slate-700"}`}
+                    >
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
                 </div>
             </div>
-        </nav>
+
+            {menuOpen ? (
+                <div className={`border-t px-4 py-4 lg:hidden ${darkMode ? "border-slate-800 bg-slate-950" : "border-slate-200 bg-white"}`}>
+                    <div className="flex flex-col gap-2">
+                        {links.map((link) => (
+                            <NavLink key={link.to} to={link.to} className={buildNavClass(link)} onClick={() => setMenuOpen(false)}>
+                                {link.label}
+                            </NavLink>
+                        ))}
+                        {isAuthenticated ? (
+                            <>
+                                <NavLink to="/profile" className={buildNavClass({ activeDark: "bg-slate-800 text-white", activeLight: "bg-slate-100 text-slate-900" })} onClick={() => setMenuOpen(false)}>
+                                    Profile
+                                </NavLink>
+                                {user?.role === "admin" ? (
+                                    <NavLink to="/admin" className={buildNavClass({ activeDark: "bg-slate-800 text-white", activeLight: "bg-slate-100 text-slate-900" })} onClick={() => setMenuOpen(false)}>
+                                        Admin
+                                    </NavLink>
+                                ) : null}
+                                <button
+                                    onClick={handleLogout}
+                                    className={`rounded-xl px-3 py-2 text-left text-sm font-bold ${darkMode ? "text-rose-300 hover:bg-rose-500/10" : "text-rose-600 hover:bg-rose-50"}`}
+                                >
+                                    Log out
+                                </button>
+                            </>
+                        ) : (
+                            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                <NavLink to="/login" onClick={() => setMenuOpen(false)} className={buildNavClass({ activeDark: "bg-slate-800 text-white", activeLight: "bg-slate-100 text-slate-900" })}>
+                                    Log In
+                                </NavLink>
+                                <NavLink to="/signup" onClick={() => setMenuOpen(false)} className="rounded-xl bg-slate-900 px-4 py-2 text-center text-sm font-bold text-white">
+                                    Sign Up
+                                </NavLink>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ) : null}
+        </header>
     );
 }
 

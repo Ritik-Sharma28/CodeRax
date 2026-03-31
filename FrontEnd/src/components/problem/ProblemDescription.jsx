@@ -1,3 +1,5 @@
+import { renderMarkdown } from '../ui/MarkdownRenderer';
+
 const getDifficultyStyle = (difficulty, darkMode) => {
     switch (difficulty?.toLowerCase()) {
         case 'easy': return { bg: darkMode ? 'bg-emerald-500/15' : 'bg-emerald-50', text: darkMode ? 'text-emerald-400' : 'text-emerald-600', dot: 'bg-emerald-500' };
@@ -35,9 +37,9 @@ function ProblemDescription({ problem, darkMode }) {
                 </div>
             </div>
 
-            {/* Description */}
-            <div className={`text-sm leading-relaxed whitespace-pre-wrap ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                {problem.description}
+            {/* Description — now rendered as markdown */}
+            <div className={`text-sm leading-relaxed ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                {renderMarkdown(problem.description, darkMode)}
             </div>
 
             {/* Examples */}

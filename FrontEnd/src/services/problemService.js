@@ -5,9 +5,17 @@ const problemService = {
         const response = await axiosClient.get('/problem/getAllProblem');
         return response.data;
     },
+    getPublicProblems: async () => {
+        const response = await axiosClient.get('/problem/public');
+        return response.data;
+    },
 
     getProblemById: async (id) => {
         const response = await axiosClient.get(`/problem/problemById/${id}`);
+        return response.data;
+    },
+    getPublicProblemById: async (id) => {
+        const response = await axiosClient.get(`/problem/public/${id}`);
         return response.data;
     },
 

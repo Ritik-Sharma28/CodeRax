@@ -4,6 +4,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import {userMiddleware} from "../middleware/userMiddleware.js";
 import { updateProfilePicture, getUserProfile } from "../controllers/userProfileController.js";
+import { getDashboardSummary } from "../controllers/dashboardController.js";
 
 const router = express.Router();
 
@@ -25,5 +26,6 @@ const upload = multer({ storage: storage });
 
 router.post("/profile-picture", userMiddleware, upload.single("avatar"), updateProfilePicture);
 router.get("/profile/:id", getUserProfile);
+router.get("/dashboard-summary", userMiddleware, getDashboardSummary);
 
 export const userProfileRouter = router;

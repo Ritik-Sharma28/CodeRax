@@ -1,60 +1,59 @@
-import { useEffect, useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import { checkAuth } from './services/slices/authSlice';
-import { Navigate, Route, Routes } from 'react-router';
-import Home from './pages/home/Home';
-import Problems from './pages/problem/Problems';
-import ProblemPage from './pages/problem/ProblemPage';
-import AdminPage from './pages/admin/AdminPage';
-import Login from './pages/auth/Login';
-import Signup from './pages/auth/Signup';
-import RevisionMentorPage from './pages/features/RevisionMentorPage';
-import ProfilePage from './pages/profile/ProfilePage';
-import BattleLobby from './pages/battle/BattleLobby';
-import BattleArena from './pages/battle/BattleArena';
-import BattleResults from './pages/battle/BattleResults';
-import MockInterviewPage from './pages/features/MockInterviewPage';
-import DSAVisualizerPage from './pages/visualizer/DSAVisualizerPage';
+import { Suspense, lazy, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Navigate, Route, Routes } from "react-router";
+import { checkAuth } from "./services/slices/authSlice";
+import LoadingState from "./components/ui/LoadingState";
+import LandingPage from "./pages/home/LandingPage";
+import FeatureLandingPage from "./pages/home/FeatureLandingPage";
+
+const Home = lazy(() => import("./pages/home/Home"));
+const Problems = lazy(() => import("./pages/problem/Problems"));
+const ProblemPage = lazy(() => import("./pages/problem/ProblemPage"));
+const AdminPage = lazy(() => import("./pages/admin/AdminPage"));
+const Login = lazy(() => import("./pages/auth/Login"));
+const Signup = lazy(() => import("./pages/auth/Signup"));
+const RevisionMentorPage = lazy(() => import("./pages/features/RevisionMentorPage"));
+const ProfilePage = lazy(() => import("./pages/profile/ProfilePage"));
+const BattleLobby = lazy(() => import("./pages/battle/BattleLobby"));
+const BattleArena = lazy(() => import("./pages/battle/BattleArena"));
+const BattleResults = lazy(() => import("./pages/battle/BattleResults"));
+const MockInterviewPage = lazy(() => import("./pages/features/MockInterviewPage"));
+const DSAVisualizerPage = lazy(() => import("./pages/visualizer/DSAVisualizerPage"));
 
 function App() {
-
   const dispatch = useDispatch();
-
-  const { user, isAuthenticated, authChecked } = useSelector((state) => state.auth)
+  const { isAuthenticated, authChecked, user } = useSelector((state) => state.auth);
 
   useEffect(() => {
     dispatch(checkAuth());
-  }, [])
+  }, [dispatch]);
 
-  if (!authChecked) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <span className="loading loading-spinner loading-lg"></span>
-    </div>
-  )
+  if (!authChecked) {
+    return <LoadingState title="Checking your session..." description="Loading CodeRax." darkMode={false} />;
+  }
+
+  const ProtectedAdmin = user?.role === "admin" ? <AdminPage /> : <Navigate to="/" replace />;
 
   return (
-    <>
-
+    <Suspense fallback={<LoadingState title="Opening page..." description="CodeRax is getting the next view ready." darkMode={false} />}>
       <Routes>
-
-        <Route path="/" element={isAuthenticated ? <Home /> : <Navigate to="/login" />}></Route>
-        <Route path="/problems" element={isAuthenticated ? <Problems /> : <Navigate to="/login" />}></Route>
-        <Route path="/problem/:problemId" element={isAuthenticated ? <ProblemPage /> : <Navigate to="/login" />}></Route>
-        <Route path="/revision-mentor" element={isAuthenticated ? <RevisionMentorPage /> : <Navigate to="/login" />}></Route>
-        <Route path="/mock-interview" element={isAuthenticated ? <MockInterviewPage /> : <Navigate to="/login" />}></Route>
-        <Route path="/dsa-visualizer" element={isAuthenticated ? <DSAVisualizerPage /> : <Navigate to="/login" />}></Route>
-        <Route path="/admin" element={isAuthenticated ? <AdminPage /> : <Navigate to="/login" />}></Route>
-        <Route path="/profile" element={isAuthenticated ? <ProfilePage /> : <Navigate to="/login" />}></Route>
-        <Route path="/battle-lobby" element={isAuthenticated ? <BattleLobby /> : <Navigate to="/login" />}></Route>
-        <Route path="/battle/:matchId" element={isAuthenticated ? <BattleArena /> : <Navigate to="/login" />}></Route>
-        <Route path="/battle-results/:matchId" element={isAuthenticated ? <BattleResults /> : <Navigate to="/login" />}></Route>
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />}></Route>
-        <Route path="/signup" element={isAuthenticated ? <Navigate to="/" /> : <Signup />}></Route>
-
+        <Route path="/" element={isAuthenticated ? <Home /> : <LandingPage />} />
+        <Route path="/problems" element={<Problems />} />
+        <Route path="/problem/:problemId" element={<ProblemPage />} />
+        <Route path="/revision-mentor" element={isAuthenticated ? <RevisionMentorPage /> : <FeatureLandingPage featureKey="revision-mentor" />} />
+        <Route path="/mock-interview" element={isAuthenticated ? <MockInterviewPage /> : <FeatureLandingPage featureKey="mock-interview" />} />
+        <Route path="/dsa-visualizer" element={isAuthenticated ? <DSAVisualizerPage /> : <FeatureLandingPage featureKey="dsa-visualizer" />} />
+        <Route path="/battle-lobby" element={isAuthenticated ? <BattleLobby /> : <FeatureLandingPage featureKey="battle-lobby" />} />
+        <Route path="/battle/:matchId" element={isAuthenticated ? <BattleArena /> : <Navigate to="/battle-lobby" replace />} />
+        <Route path="/battle-results/:matchId" element={isAuthenticated ? <BattleResults /> : <Navigate to="/battle-lobby" replace />} />
+        <Route path="/admin" element={isAuthenticated ? ProtectedAdmin : <Navigate to="/login" replace />} />
+        <Route path="/profile" element={isAuthenticated ? <ProfilePage /> : <Navigate to="/login" replace />} />
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
+        <Route path="/signup" element={isAuthenticated ? <Navigate to="/" replace /> : <Signup />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-
-    </>
-  )
+    </Suspense>
+  );
 }
 
-export default App
+export default App;

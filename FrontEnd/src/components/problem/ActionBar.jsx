@@ -6,7 +6,6 @@ function ActionBar({ onRun, onSubmit, onConsole, loading, darkMode }) {
                 : 'bg-slate-50/80 border-slate-200/60'
             }`}
         >
-            {/* Left - Console shortcut */}
             <button
                 onClick={onConsole}
                 className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-colors
@@ -21,7 +20,6 @@ function ActionBar({ onRun, onSubmit, onConsole, loading, darkMode }) {
                 Console
             </button>
 
-            {/* Right - Action Buttons */}
             <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                     onClick={onRun}

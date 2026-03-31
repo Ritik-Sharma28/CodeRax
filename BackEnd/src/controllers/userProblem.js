@@ -45,11 +45,15 @@ export const createProblem = async (req, res) => {
             problemCreator: req.result._id
         })
 
-        res.status(200).send("Problem Created Successfully")
+        res.status(200).json({
+            message: "Problem created successfully"
+        })
 
 
     } catch (error) {
-        res.status(500).send("Error Occured in Creating Problem = " + error.message)
+        res.status(500).json({
+            message: error?.message || "Failed to create problem"
+        })
     }
 }
 
@@ -73,11 +77,15 @@ export const updateProblem = async (req, res) => {
 
         const update = await Problem.findByIdAndUpdate(id, { ...req.body }, { runValidators: true, new: true })
 
-        res.send("Updated Successfully")
+        res.json({
+            message: "Problem updated successfully"
+        })
 
 
     } catch (err) {
-        res.send("Error in Updating Problem " + err);
+        res.status(500).json({
+            message: err?.message || "Failed to update problem"
+        });
     }
 }
 
@@ -91,13 +99,50 @@ export const deleteProblem = async (req, res) => {
         const deleted = await Problem.findByIdAndDelete(id);
 
         if (!deleted)
-            res.send("Deletion Failed")
+            return res.status(404).json({
+                message: "Problem not found"
+            })
 
-        res.send("Deleted Successfully")
+        res.json({
+            message: "Problem deleted successfully"
+        })
 
 
     } catch (err) {
-        res.send("Error during Deletion " + err)
+        res.status(500).json({
+            message: err?.message || "Failed to delete problem"
+        })
+    }
+}
+
+export const getPublicProblemById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const problem = await Problem.findById(id)
+            .select('_id title description difficulty tags visibleTestCases startCode referenceSolution problemSignature');
+
+        if (!problem) {
+            return res.status(404).json({
+                message: "Problem not found"
+            });
+        }
+
+        res.status(200).json(problem);
+    } catch (err) {
+        res.status(500).json({
+            message: err?.message || "Failed to fetch problem"
+        });
+    }
+}
+
+export const getPublicProblems = async (_req, res) => {
+    try {
+        const problems = await Problem.find({}).select('_id title difficulty tags').lean();
+        res.status(200).json(problems);
+    } catch (err) {
+        res.status(500).json({
+            message: err?.message || "Failed to fetch problems"
+        });
     }
 }
 

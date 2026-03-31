@@ -34,7 +34,9 @@ export const adminMiddleware = async (req, res , next) =>{
 
      }catch(error){
           console.log("Error is : " , error);
-          res.status(401).send("Error is : " + error)
+          res.status(401).json({
+               message: error?.message || "Unauthorized"
+          })
      }
 
      

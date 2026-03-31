@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import Navbar from '../../components/Navbar';
-import { checkAuth } from '../../services/slices/authSlice';
+import { checkAuth, updateUserFields } from '../../services/slices/authSlice';
 import matchService from '../../services/matchService';
 import problemService from '../../services/problemService';
 
@@ -86,6 +86,7 @@ export default function ProfilePage() {
 
         try {
             const data = await matchService.uploadProfilePicture(formData);
+            dispatch(updateUserFields({ profilePicture: data.profilePicture }));
             await dispatch(checkAuth());
             setProfileData((current) => ({ ...current, profilePicture: data.profilePicture }));
         } catch (error) {

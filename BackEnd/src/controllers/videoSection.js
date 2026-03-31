@@ -132,7 +132,10 @@ export const handleCloudinaryWebhook = async (req, res) => {
 // TEMPORARY FALLBACK FOR LOCALHOST TESTING
 export const saveVideoLocalFallback = async (req, res) => {
   try {
-    // for local host you can delete that after hosted
+    if (process.env.ENABLE_LOCAL_VIDEO_FALLBACK !== "true") {
+      return res.status(403).json({ error: "Local video fallback is disabled" });
+    }
+
     const { problemId, secureUrl, duration, publicId } = req.body;
     
     const problem = await Problem.findById(problemId);

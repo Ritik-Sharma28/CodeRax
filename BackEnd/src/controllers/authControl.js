@@ -24,6 +24,9 @@ export const register = async (req, res) => {
             emailId: user.emailId,
             _id: user._id,
             role: user.role,
+            profilePicture: user.profilePicture,
+            rating: user.rating,
+            rank: user.rank,
             mockInterviewUseLeft: user.mockInterviewUseLeft,
             aiChatMsgsLeft: user.aiChatMsgsLeft,
             revisionMsgsLeft: user.revisionMsgsLeft,
@@ -35,9 +38,9 @@ export const register = async (req, res) => {
             message: "Loggin Successfully"
         })
     } catch (err) {
-        res.status(400).json( {
-            error : err
-    });
+        res.status(400).json({
+            message: err?.message || "Registration failed",
+        });
     }
 }
 
@@ -60,6 +63,9 @@ export const login = async (req, res) => {
             emailId: user.emailId,
             _id: user._id,
             role: user.role,
+            profilePicture: user.profilePicture,
+            rating: user.rating,
+            rank: user.rank,
             mockInterviewUseLeft: user.mockInterviewUseLeft,
             aiChatMsgsLeft: user.aiChatMsgsLeft,
             revisionMsgsLeft: user.revisionMsgsLeft,
@@ -146,6 +152,9 @@ export const check = async (req, res) => {
             emailId: req.result.emailId,
             _id: req.result._id,
             role: req.result.role,
+            profilePicture: req.result.profilePicture,
+            rating: req.result.rating,
+            rank: req.result.rank,
             mockInterviewUseLeft: req.result.mockInterviewUseLeft,
             aiChatMsgsLeft: req.result.aiChatMsgsLeft,
             revisionMsgsLeft: req.result.revisionMsgsLeft,

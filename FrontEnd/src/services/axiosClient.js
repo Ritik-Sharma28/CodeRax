@@ -11,15 +11,24 @@ const axiosClient =  axios.create({
         'Content-Type': 'application/json'
     }
 });
-// axiosClient.interceptors.response.use(
 
-//   (response) => response,
+axiosClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const message =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      "Something went wrong. Please try again.";
 
-//   (error) => {
-//     return Promise.reject(error.response?.data || error);
-//   }
-
-// );
+    return Promise.reject({
+      ...error,
+      message,
+      data: error?.response?.data,
+      status: error?.response?.status,
+    });
+  }
+);
 
 
 

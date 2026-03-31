@@ -1,23 +1,41 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
-import axiosClient from "../axiosClient"
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axiosClient from "../axiosClient";
+
+const readStoredUser = () => {
+    try {
+        const raw = localStorage.getItem("coderax-user");
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+};
+
+const persistUser = (user) => {
+    try {
+        if (user) localStorage.setItem("coderax-user", JSON.stringify(user));
+        else localStorage.removeItem("coderax-user");
+    } catch {
+        // Ignore storage failures and keep auth in memory.
+    }
+};
 
 export const registerUser = createAsyncThunk(
     "auth/register",
     async (userData, { rejectWithValue }) => {
         try {
-            const response = await axiosClient.post('/auth/register', userData)
-            return response.data.user
+            const response = await axiosClient.post("/auth/register", userData);
+            return response.data.user;
         } catch (err) {
             return rejectWithValue(err.response?.data || { message: err.message });
         }
     }
-)
+);
 
 export const loginUser = createAsyncThunk(
-    'auth/login',
+    "auth/login",
     async (credentials, { rejectWithValue }) => {
         try {
-            const response = await axiosClient.post('/auth/login', credentials);
+            const response = await axiosClient.post("/auth/login", credentials);
             return response.data.user;
         } catch (error) {
             return rejectWithValue(error.response?.data || { message: error.message });
@@ -25,12 +43,11 @@ export const loginUser = createAsyncThunk(
     }
 );
 
-
 export const checkAuth = createAsyncThunk(
-    'auth/check',
+    "auth/check",
     async (_, { rejectWithValue }) => {
         try {
-            const { data } = await axiosClient.get('/auth/check');
+            const { data } = await axiosClient.get("/auth/check");
             return data.user;
         } catch (error) {
             if (error.response?.status === 401) {
@@ -42,10 +59,10 @@ export const checkAuth = createAsyncThunk(
 );
 
 export const logoutUser = createAsyncThunk(
-    'auth/logout',
+    "auth/logout",
     async (_, { rejectWithValue }) => {
         try {
-            await axiosClient.post('/auth/logout');
+            await axiosClient.post("/auth/logout");
             return null;
         } catch (error) {
             return rejectWithValue(error.response?.data || { message: error.message });
@@ -53,40 +70,45 @@ export const logoutUser = createAsyncThunk(
     }
 );
 
+const storedUser = readStoredUser();
 
 const initialState = {
-    user: null,
-    isAuthenticated: false,
+    user: storedUser,
+    isAuthenticated: !!storedUser,
     loading: false,
     authChecked: false,
-    error: null
-}
+    error: null,
+};
 
 const authSlice = createSlice({
     name: "auth",
     initialState,
-    reducers: {},
+    reducers: {
+        updateUserFields: (state, action) => {
+            state.user = state.user ? { ...state.user, ...action.payload } : action.payload;
+            state.isAuthenticated = !!state.user;
+            persistUser(state.user);
+        },
+    },
     extraReducers: (builder) => {
-        // Register User Cases
         builder
-            .addCase(registerUser.pending, (state, action) => {
-                state.loading = true,
-                    state.error = null;
+            .addCase(registerUser.pending, (state) => {
+                state.loading = true;
+                state.error = null;
             })
             .addCase(registerUser.fulfilled, (state, action) => {
-                state.loading = false
-                state.isAuthenticated = !!action.payload
-                state.user = action.payload
+                state.loading = false;
+                state.isAuthenticated = !!action.payload;
+                state.user = action.payload;
+                persistUser(action.payload);
             })
             .addCase(registerUser.rejected, (state, action) => {
-                state.loading = false
-                state.error = action.payload?.error || 'Something went wrong';
-                state.isAuthenticated = false
-                state.user = null
+                state.loading = false;
+                state.error = action.payload?.error || "Something went wrong";
+                state.isAuthenticated = false;
+                state.user = null;
+                persistUser(null);
             })
-
-            // Login User Cases
-
             .addCase(loginUser.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -95,15 +117,15 @@ const authSlice = createSlice({
                 state.loading = false;
                 state.isAuthenticated = !!action.payload;
                 state.user = action.payload;
+                persistUser(action.payload);
             })
             .addCase(loginUser.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload?.message || 'Something went wrong';
+                state.error = action.payload?.message || "Something went wrong";
                 state.isAuthenticated = false;
                 state.user = null;
+                persistUser(null);
             })
-
-            // Check Auth Cases
             .addCase(checkAuth.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -113,16 +135,16 @@ const authSlice = createSlice({
                 state.authChecked = true;
                 state.isAuthenticated = !!action.payload;
                 state.user = action.payload;
+                persistUser(action.payload);
             })
-            .addCase(checkAuth.rejected, (state, action) => {
+            .addCase(checkAuth.rejected, (state) => {
                 state.loading = false;
                 state.authChecked = true;
                 state.error = null;
                 state.isAuthenticated = false;
                 state.user = null;
+                persistUser(null);
             })
-
-            // Logout User Cases
             .addCase(logoutUser.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -132,14 +154,17 @@ const authSlice = createSlice({
                 state.user = null;
                 state.isAuthenticated = false;
                 state.error = null;
+                persistUser(null);
             })
             .addCase(logoutUser.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload?.message || 'Something went wrong';
+                state.error = action.payload?.message || "Something went wrong";
                 state.isAuthenticated = false;
                 state.user = null;
+                persistUser(null);
             });
-    }
-})
+    },
+});
 
-export default authSlice.reducer
+export const { updateUserFields } = authSlice.actions;
+export default authSlice.reducer;

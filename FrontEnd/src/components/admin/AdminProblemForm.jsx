@@ -422,15 +422,18 @@ function AdminProblemForm({ formData, setFormData, isEditMode, onSubmit, onDelet
                                                 const cloudinaryResult = await uploadRes.json();
                                                 if(cloudinaryResult.error) throw new Error(cloudinaryResult.error.message);
 
-                                                // 3. Fallback database save (since webhook might fail locally)
-                                                await problemService.saveVideoLocalFallback({
-                                                    problemId: data._id,
-                                                    secureUrl: cloudinaryResult.secure_url,
-                                                    duration: cloudinaryResult.duration,
-                                                    publicId: cloudinaryResult.public_id,
-                                                });
-
-                                                setVideoSuccess('Video uploaded and saved successfully!');
+                                                // 3. Local fallback is optional and can be disabled in deployed environments.
+                                                try {
+                                                    await problemService.saveVideoLocalFallback({
+                                                        problemId: data._id,
+                                                        secureUrl: cloudinaryResult.secure_url,
+                                                        duration: cloudinaryResult.duration,
+                                                        publicId: cloudinaryResult.public_id,
+                                                    });
+                                                    setVideoSuccess('Video uploaded and saved successfully!');
+                                                } catch (fallbackError) {
+                                                    setVideoSuccess('Video uploaded successfully. Metadata will sync through the backend workflow.');
+                                                }
                                                 setVideoFile(null);
                                             } catch(err) {
                                                 setVideoError(err.message || 'Error uploading video');

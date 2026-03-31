@@ -18,6 +18,7 @@ import { setupSocket } from "./socketManager.js";
 import { userProfileRouter } from "./routes/userProfile.js";
 import { matchRouter } from "./routes/match.js";
 import { initMatchmaker } from "./workers/matchmaker.js";
+import { contentRouter } from "./routes/content.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -48,6 +49,7 @@ app.use((req, res, next) => {
 app.use("/auth", authRouter)
 app.use("/api/user", userProfileRouter)
 app.use("/api/match", matchRouter)
+app.use("/api/content", contentRouter)
 app.use("/problem", problemRouter)
 app.use("/submission",submitRouter);
 app.use('/ai',AIRouter);

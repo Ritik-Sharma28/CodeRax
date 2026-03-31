@@ -14,7 +14,6 @@ const RIGHT_TABS = [
     { key: 'notes', label: '📌 Notes', icon: 'M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z' },
 ];
 
-// ─── Notes Panel Component ───────────────────────────────────────────────────
 function NotesPanel({ problemId, darkMode }) {
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -79,7 +78,6 @@ function NotesPanel({ problemId, darkMode }) {
 
     return (
         <div className="flex-1 flex flex-col min-h-0">
-            {/* Add Quick Note Form */}
             <div className={`p-3 border-b ${darkMode ? 'border-slate-700/50' : 'border-slate-200/50'}`}>
                 <form onSubmit={handleSaveNote} className="space-y-2">
                     <textarea
@@ -111,7 +109,6 @@ function NotesPanel({ problemId, darkMode }) {
                 )}
             </div>
 
-            {/* Notes List */}
             <div className="flex-1 overflow-y-auto p-3">
                 {loading ? (
                     <div className="flex items-center justify-center py-8">
@@ -156,7 +153,6 @@ function NotesPanel({ problemId, darkMode }) {
     );
 }
 
-
 function RightPanel({
     code,
     selectedLanguage,
@@ -178,7 +174,6 @@ function RightPanel({
     const availableTabs = battleMode ? RIGHT_TABS.filter((tab) => tab.key !== 'notes') : RIGHT_TABS;
     return (
         <div className="flex-1 flex flex-col min-h-0">
-            {/* Tab Navigation */}
             <div className={`flex items-center gap-1 px-2 sm:px-3 py-2 border-b overflow-x-auto scrollbar-none
                 ${darkMode
                     ? 'bg-slate-900/60 border-slate-700/60'
@@ -213,7 +208,6 @@ function RightPanel({
                 ))}
             </div>
 
-            {/* Tab Content */}
             <div className="flex-1 flex flex-col min-h-0">
                 {activeRightTab === 'code' && (
                     <CodeEditor
@@ -250,7 +244,6 @@ function RightPanel({
                 )}
             </div>
 
-            {/* Action Bar */}
             <ActionBar
                 onRun={onRun}
                 onSubmit={onSubmit}

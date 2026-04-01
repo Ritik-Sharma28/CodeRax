@@ -8,7 +8,7 @@
 
 [![Live Demo](https://img.shields.io/badge/🌐_Frontend-Vercel-black?style=for-the-badge)](https://coderax-eosin.vercel.app)
 [![API](https://img.shields.io/badge/🚀_Backend-Render-46E3B7?style=for-the-badge)](https://your-render-url.onrender.com)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](LICENSE)
 
 </div>
 

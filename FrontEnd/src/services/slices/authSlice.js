@@ -24,9 +24,81 @@ export const registerUser = createAsyncThunk(
     async (userData, { rejectWithValue }) => {
         try {
             const response = await axiosClient.post("/auth/register", userData);
-            return response.data.user;
+            return response.data;
         } catch (err) {
-            return rejectWithValue(err.response?.data || { message: err.message });
+            return rejectWithValue(err.data || { message: err.message, status: err.status });
+        }
+    }
+);
+
+export const verifyOtp = createAsyncThunk(
+    "auth/verifyOtp",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await axiosClient.post("/auth/verify-otp", payload);
+            return response.data.user;
+        } catch (error) {
+            return rejectWithValue(error.data || { message: error.message, status: error.status });
+        }
+    }
+);
+
+export const resendOtp = createAsyncThunk(
+    "auth/resendOtp",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await axiosClient.post("/auth/resend-otp", payload);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(error.data || { message: error.message, status: error.status });
+        }
+    }
+);
+
+export const forgotPassword = createAsyncThunk(
+    "auth/forgotPassword",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await axiosClient.post("/auth/forgot-password", payload);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(error.data || { message: error.message, status: error.status });
+        }
+    }
+);
+
+export const verifyResetOtp = createAsyncThunk(
+    "auth/verifyResetOtp",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await axiosClient.post("/auth/verify-reset-otp", payload);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(error.data || { message: error.message, status: error.status });
+        }
+    }
+);
+
+export const resendResetOtp = createAsyncThunk(
+    "auth/resendResetOtp",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await axiosClient.post("/auth/resend-reset-otp", payload);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(error.data || { message: error.message, status: error.status });
+        }
+    }
+);
+
+export const googleLogin = createAsyncThunk(
+    "auth/googleLogin",
+    async (credential, { rejectWithValue }) => {
+        try {
+            const response = await axiosClient.post("/auth/google", { credential });
+            return response.data.user;
+        } catch (error) {
+            return rejectWithValue(error.data || { message: error.message, status: error.status });
         }
     }
 );
@@ -38,7 +110,7 @@ export const loginUser = createAsyncThunk(
             const response = await axiosClient.post("/auth/login", credentials);
             return response.data.user;
         } catch (error) {
-            return rejectWithValue(error.response?.data || { message: error.message });
+            return rejectWithValue(error.data || { message: error.message, status: error.status });
         }
     }
 );
@@ -50,10 +122,10 @@ export const checkAuth = createAsyncThunk(
             const { data } = await axiosClient.get("/auth/check");
             return data.user;
         } catch (error) {
-            if (error.response?.status === 401) {
+            if (error.status === 401) {
                 return rejectWithValue(null);
             }
-            return rejectWithValue(error.response?.data || { message: error.message });
+            return rejectWithValue(error.data || { message: error.message, status: error.status });
         }
     }
 );
@@ -65,7 +137,7 @@ export const logoutUser = createAsyncThunk(
             await axiosClient.post("/auth/logout");
             return null;
         } catch (error) {
-            return rejectWithValue(error.response?.data || { message: error.message });
+            return rejectWithValue(error.data || { message: error.message, status: error.status });
         }
     }
 );
@@ -78,6 +150,22 @@ const initialState = {
     loading: false,
     authChecked: false,
     error: null,
+    pendingVerificationEmail: null,
+    verificationMeta: null,
+    pendingResetEmail: null,
+    resetMeta: null,
+    resetSuccessMessage: null,
+};
+
+const setAuthenticatedUser = (state, user) => {
+    state.user = user;
+    state.isAuthenticated = !!user;
+    state.pendingVerificationEmail = null;
+    state.verificationMeta = null;
+    state.pendingResetEmail = null;
+    state.resetMeta = null;
+    state.resetSuccessMessage = null;
+    persistUser(user);
 };
 
 const authSlice = createSlice({
@@ -89,6 +177,36 @@ const authSlice = createSlice({
             state.isAuthenticated = !!state.user;
             persistUser(state.user);
         },
+        setPendingVerification: (state, action) => {
+            state.pendingVerificationEmail = action.payload?.emailId || null;
+            state.verificationMeta = action.payload
+                ? {
+                    resendAvailableAt: action.payload.resendAvailableAt || null,
+                    expiresAt: action.payload.expiresAt || null,
+                }
+                : null;
+        },
+        clearPendingVerification: (state) => {
+            state.pendingVerificationEmail = null;
+            state.verificationMeta = null;
+        },
+        setPendingReset: (state, action) => {
+            state.pendingResetEmail = action.payload?.emailId || null;
+            state.resetMeta = action.payload
+                ? {
+                    resendAvailableAt: action.payload.resendAvailableAt || null,
+                    expiresAt: action.payload.expiresAt || null,
+                }
+                : null;
+            state.resetSuccessMessage = null;
+        },
+        clearPendingReset: (state) => {
+            state.pendingResetEmail = null;
+            state.resetMeta = null;
+        },
+        clearResetSuccessMessage: (state) => {
+            state.resetSuccessMessage = null;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -98,16 +216,113 @@ const authSlice = createSlice({
             })
             .addCase(registerUser.fulfilled, (state, action) => {
                 state.loading = false;
-                state.isAuthenticated = !!action.payload;
-                state.user = action.payload;
-                persistUser(action.payload);
+                state.isAuthenticated = false;
+                state.user = null;
+                state.error = null;
+                state.pendingVerificationEmail = action.payload?.emailId || null;
+                state.verificationMeta = {
+                    resendAvailableAt: action.payload?.resendAvailableAt || null,
+                    expiresAt: action.payload?.expiresAt || null,
+                };
+                persistUser(null);
             })
             .addCase(registerUser.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload?.error || "Something went wrong";
-                state.isAuthenticated = false;
-                state.user = null;
-                persistUser(null);
+                state.error = action.payload?.message || "Something went wrong";
+            })
+            .addCase(verifyOtp.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(verifyOtp.fulfilled, (state, action) => {
+                state.loading = false;
+                state.error = null;
+                setAuthenticatedUser(state, action.payload);
+            })
+            .addCase(verifyOtp.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload?.message || "Unable to verify the code.";
+            })
+            .addCase(resendOtp.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(resendOtp.fulfilled, (state, action) => {
+                state.loading = false;
+                state.error = null;
+                state.pendingVerificationEmail = action.payload?.emailId || state.pendingVerificationEmail;
+                state.verificationMeta = {
+                    resendAvailableAt: action.payload?.resendAvailableAt || null,
+                    expiresAt: action.payload?.expiresAt || null,
+                };
+            })
+            .addCase(resendOtp.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload?.message || "Unable to resend the code.";
+            })
+            .addCase(forgotPassword.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+                state.resetSuccessMessage = null;
+            })
+            .addCase(forgotPassword.fulfilled, (state, action) => {
+                state.loading = false;
+                state.error = null;
+                state.pendingResetEmail = action.payload?.emailId || null;
+                state.resetMeta = {
+                    resendAvailableAt: action.payload?.resendAvailableAt || null,
+                    expiresAt: action.payload?.expiresAt || null,
+                };
+            })
+            .addCase(forgotPassword.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload?.message || "Unable to start password reset.";
+            })
+            .addCase(verifyResetOtp.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+                state.resetSuccessMessage = null;
+            })
+            .addCase(verifyResetOtp.fulfilled, (state, action) => {
+                state.loading = false;
+                state.error = null;
+                state.pendingResetEmail = null;
+                state.resetMeta = null;
+                state.resetSuccessMessage = action.payload?.message || "Password reset successful.";
+            })
+            .addCase(verifyResetOtp.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload?.message || "Unable to reset the password.";
+            })
+            .addCase(resendResetOtp.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(resendResetOtp.fulfilled, (state, action) => {
+                state.loading = false;
+                state.error = null;
+                state.pendingResetEmail = action.payload?.emailId || state.pendingResetEmail;
+                state.resetMeta = {
+                    resendAvailableAt: action.payload?.resendAvailableAt || null,
+                    expiresAt: action.payload?.expiresAt || null,
+                };
+            })
+            .addCase(resendResetOtp.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload?.message || "Unable to resend the reset code.";
+            })
+            .addCase(googleLogin.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(googleLogin.fulfilled, (state, action) => {
+                state.loading = false;
+                state.error = null;
+                setAuthenticatedUser(state, action.payload);
+            })
+            .addCase(googleLogin.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload?.message || "Unable to continue with Google.";
             })
             .addCase(loginUser.pending, (state) => {
                 state.loading = true;
@@ -115,16 +330,26 @@ const authSlice = createSlice({
             })
             .addCase(loginUser.fulfilled, (state, action) => {
                 state.loading = false;
-                state.isAuthenticated = !!action.payload;
-                state.user = action.payload;
-                persistUser(action.payload);
+                state.error = null;
+                setAuthenticatedUser(state, action.payload);
             })
             .addCase(loginUser.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload?.message || "Something went wrong";
-                state.isAuthenticated = false;
-                state.user = null;
-                persistUser(null);
+
+                if (action.payload?.error === "verification_required") {
+                    state.pendingVerificationEmail = action.payload?.emailId || state.pendingVerificationEmail;
+                    state.verificationMeta = {
+                        resendAvailableAt: action.payload?.resendAvailableAt || null,
+                        expiresAt: action.payload?.expiresAt || null,
+                    };
+                }
+
+                if (action.payload?.status === 401) {
+                    state.isAuthenticated = false;
+                    state.user = null;
+                    persistUser(null);
+                }
             })
             .addCase(checkAuth.pending, (state) => {
                 state.loading = true;
@@ -133,9 +358,8 @@ const authSlice = createSlice({
             .addCase(checkAuth.fulfilled, (state, action) => {
                 state.loading = false;
                 state.authChecked = true;
-                state.isAuthenticated = !!action.payload;
-                state.user = action.payload;
-                persistUser(action.payload);
+                state.error = null;
+                setAuthenticatedUser(state, action.payload);
             })
             .addCase(checkAuth.rejected, (state) => {
                 state.loading = false;
@@ -151,9 +375,14 @@ const authSlice = createSlice({
             })
             .addCase(logoutUser.fulfilled, (state) => {
                 state.loading = false;
+                state.error = null;
                 state.user = null;
                 state.isAuthenticated = false;
-                state.error = null;
+                state.pendingVerificationEmail = null;
+                state.verificationMeta = null;
+                state.pendingResetEmail = null;
+                state.resetMeta = null;
+                state.resetSuccessMessage = null;
                 persistUser(null);
             })
             .addCase(logoutUser.rejected, (state, action) => {
@@ -166,5 +395,12 @@ const authSlice = createSlice({
     },
 });
 
-export const { updateUserFields } = authSlice.actions;
+export const {
+    updateUserFields,
+    setPendingVerification,
+    clearPendingVerification,
+    setPendingReset,
+    clearPendingReset,
+    clearResetSuccessMessage,
+} = authSlice.actions;
 export default authSlice.reducer;

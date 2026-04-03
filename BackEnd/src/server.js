@@ -23,6 +23,7 @@ import { contentRouter } from "./routes/content.js";
 const app = express();
 const server = http.createServer(app);
 const PORT = Number(process.env.PORT) || 3000;
+app.set("trust proxy", 1);
 const allowedOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
   .map((origin) => origin.trim())
@@ -105,4 +106,3 @@ const serverConnect = async () => {
 }
 
 serverConnect()
-

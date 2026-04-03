@@ -1,5 +1,12 @@
 import axios from "axios"
 import { getApiBaseUrl } from "./apiBaseUrl";
+import { openVerificationModal } from "./slices/uiSlice";
+
+let storeRef = null;
+
+export const attachAxiosStore = (store) => {
+  storeRef = store;
+};
 
 const axiosClient =  axios.create({
     baseURL: getApiBaseUrl(),
@@ -12,17 +19,24 @@ const axiosClient =  axios.create({
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    const status = error?.response?.status;
+    const data = error?.response?.data;
+
+    if (status === 403 && data?.error === "verification_required" && storeRef && String(error?.config?.url || "").startsWith("/ai")) {
+      storeRef.dispatch(openVerificationModal({ message: data?.message }));
+    }
+
     const message =
-      error?.response?.data?.message ||
-      error?.response?.data?.error ||
+      data?.message ||
+      data?.error ||
       error?.message ||
       "Something went wrong. Please try again.";
 
     return Promise.reject({
       ...error,
       message,
-      data: error?.response?.data,
-      status: error?.response?.status,
+      data,
+      status,
     });
   }
 );

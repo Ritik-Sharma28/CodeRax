@@ -56,6 +56,8 @@ export default function DSAVisualizerPage() {
     const initialAlgorithm = algorithmRegistry[0];
     const initialSteps = initialAlgorithm.buildSteps(initialAlgorithm.parseInput(initialAlgorithm.defaultInput));
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+    const [mobileProceed, setMobileProceed] = useState(() => sessionStorage.getItem('visualizer-mobile-continue') === 'true');
+    const [isMobileViewport, setIsMobileViewport] = useState(() => window.innerWidth < 1024);
     const [selectedAlgorithmId, setSelectedAlgorithmId] = useState(initialAlgorithm.id);
     const [rawInput, setRawInput] = useState(initialAlgorithm.defaultInput);
     const [steps, setSteps] = useState(initialSteps);
@@ -70,6 +72,12 @@ export default function DSAVisualizerPage() {
     useEffect(() => {
         localStorage.setItem('darkMode', darkMode);
     }, [darkMode]);
+
+    useEffect(() => {
+        const onResize = () => setIsMobileViewport(window.innerWidth < 1024);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
 
     useEffect(() => {
         if (!isPlaying || steps.length <= 1) return undefined;
@@ -135,6 +143,43 @@ export default function DSAVisualizerPage() {
     };
 
     if (!selectedAlgorithm) return null;
+
+    if (isMobileViewport && !mobileProceed) {
+        return (
+            <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+                <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
+                <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl items-center px-4 py-10 sm:px-6">
+                    <div className={`w-full rounded-[32px] border p-8 shadow-[0_30px_120px_-50px_rgba(15,23,42,0.4)] ${darkMode ? 'border-slate-800 bg-slate-900/90' : 'border-slate-200 bg-white'}`}>
+                        <p className={`text-xs font-bold uppercase tracking-[0.24em] ${darkMode ? 'text-amber-300' : 'text-amber-700'}`}>DSA Visualizer</p>
+                        <h1 className="mt-3 text-3xl font-black sm:text-4xl">Best experienced on desktop</h1>
+                        <p className={`mt-4 max-w-2xl text-sm leading-7 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                            The visualizer is currently optimized for wider screens. You can still continue on mobile, but the layout and controls will feel much better on desktop or laptop.
+                        </p>
+
+                        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    sessionStorage.setItem('visualizer-mobile-continue', 'true');
+                                    setMobileProceed(true);
+                                }}
+                                className="rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 text-sm font-black text-white transition hover:from-amber-400 hover:to-orange-400"
+                            >
+                                Continue anyway
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => window.history.back()}
+                                className={`rounded-2xl border px-5 py-3 text-sm font-bold transition ${darkMode ? 'border-slate-700 text-slate-200 hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                            >
+                                Go back
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <ReactFlowProvider>

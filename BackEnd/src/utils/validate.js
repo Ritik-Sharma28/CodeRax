@@ -16,3 +16,11 @@ export const validate = (data) => {
         throw new Error("Weak Password");
 
 }
+
+export const validateStrongPassword = (password) => {
+    if (!password || typeof password !== "string")
+        throw new Error("Password is required");
+
+    if (!validator.isStrongPassword(password))
+        throw new Error("Weak Password");
+};

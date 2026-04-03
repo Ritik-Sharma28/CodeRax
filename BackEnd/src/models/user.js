@@ -31,6 +31,19 @@ const userSchema = new Schema({
         enum: ["user", "admin"],
         default: 'user'
     },
+    verified: {
+        type: Boolean,
+        default: undefined
+    },
+    authProvider: {
+        type: String,
+        enum: ["local", "google", "hybrid"],
+        default: "local"
+    },
+    googleId: {
+        type: String,
+        default: ""
+    },
     problemSolved: [{
         type: Schema.Types.ObjectId,
         ref: 'problem'
@@ -57,7 +70,7 @@ const userSchema = new Schema({
     },
     password: {
         type: String,
-        required: true
+        required: false
     },
     mockInterviewUseLeft: {
         type: Number,

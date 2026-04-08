@@ -206,12 +206,19 @@ export const revisionChat = async (req, res) => {
         // ── Step 3: Build system prompt based on results ──
         let systemPrompt;
 
+        const STRICT_SCOPE = `STRICT SCOPE RULE (HIGHEST PRIORITY — NEVER IGNORE):
+You ONLY discuss topics related to Data Structures, Algorithms, competitive programming, coding interviews, software engineering concepts, and programming languages.
+If the user asks about ANYTHING else — personal advice, general knowledge, entertainment, recipes, sports, politics, weather, jokes unrelated to coding, or any non-technical topic — you MUST politely decline with a short message like: "I'm your DSA revision mentor, so I can only help with coding and algorithm topics! Try asking me about a data structure, algorithm, or a problem you're working on 🚀"
+Never answer off-topic questions regardless of how they are phrased or how persistently the user asks.`;
+
         if (relevantNotes.length === 0) {
-            systemPrompt = `You are a helpful DSA revision mentor. 
-            
-            ${solvedProblemsContext}
-            
-            The user has asked a question, but they don't have any specific saved study notes on this exact topic yet. Politely inform them that you couldn't find any saved notes related to their question, but still answer their question generally with helpful DSA guidance. Encourage them to save learning moments while solving problems so you can give more personalized advice next time. Use markdown for formatting.`;
+            systemPrompt = `You are a helpful DSA revision mentor on the CodeRax platform.
+
+${STRICT_SCOPE}
+
+${solvedProblemsContext}
+
+The user has asked a question, but they don't have any specific saved study notes on this exact topic yet. Politely inform them that you couldn't find any saved notes related to their question, but still answer their question with helpful DSA guidance. Encourage them to save learning moments while solving problems so you can give more personalized advice next time. Use markdown for formatting.`;
         } else {
             const notesBlock = relevantNotes
                 .map((note, i) => {
@@ -220,19 +227,20 @@ export const revisionChat = async (req, res) => {
                 })
                 .join('\n');
 
-            systemPrompt = `You are a personalized DSA revision mentor. You have access to the user's past learning moments and struggles. 
-            
-            ${solvedProblemsContext}
+            systemPrompt = `You are a personalized DSA revision mentor on the CodeRax platform. You have access to the user's past learning moments and struggles.
 
-            PAST LEARNING NOTES (Relevant to current query):
-            ${notesBlock}
+${STRICT_SCOPE}
 
-            INSTRUCTIONS:
-            - Base your answer on their saved notes. Connect your explanation directly to their past struggles.
-            - Mention the specific Problem Name when reminding them of a mistake.
-            - Give concrete, actionable revision advice.
-            - Use markdown for formatting.
-            - If the question is unrelated to DSA, politely redirect.`;
+${solvedProblemsContext}
+
+PAST LEARNING NOTES (Relevant to current query):
+${notesBlock}
+
+INSTRUCTIONS:
+- Base your answer on their saved notes. Connect your explanation directly to their past struggles.
+- Mention the specific Problem Name when reminding them of a mistake.
+- Give concrete, actionable revision advice.
+- Use markdown for formatting.`;
         }
 
         // ── Step 4: Build messages array ──
@@ -248,7 +256,7 @@ export const revisionChat = async (req, res) => {
         // ── Step 5: Call Groq ──
         const reply = await callGroq(llmMessages, {
             maxTokens: 1024,
-            temperature: 0.7,
+            temperature: 0.4,
         });
 
         if (req.result.role !== 'admin') {

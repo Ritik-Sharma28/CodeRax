@@ -30,7 +30,7 @@ function App() {
   }, [dispatch]);
 
   if (!authChecked) {
-    return <LoadingState title="Checking your session..." description="Loading CodeRax." darkMode={false} />;
+    return <LoadingState title="Waking up the server..." description="Loading CodeRax." darkMode={false} humorous={true} />;
   }
 
   const ProtectedAdmin = user?.role === "admin" ? <AdminPage /> : <Navigate to="/" replace />;

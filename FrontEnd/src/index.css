@@ -102,3 +102,29 @@ body {
 .animate-pulse-glow {
   animation: pulseGlow 3s ease-in-out infinite;
 }
+
+/* Bouncing dots for loading indicator */
+@keyframes bounceDot {
+  0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Glowing ring spinner */
+@keyframes glowRingSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes glowRingPulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.3), 0 0 30px rgba(6, 182, 212, 0.15); }
+  50% { box-shadow: 0 0 25px rgba(99, 102, 241, 0.5), 0 0 50px rgba(6, 182, 212, 0.3); }
+}
+
+/* Fade-slide transition for loading messages */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeSlideOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}

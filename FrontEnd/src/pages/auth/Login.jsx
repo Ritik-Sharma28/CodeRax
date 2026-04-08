@@ -221,7 +221,7 @@ function Login() {
 
                 <div className="my-5 flex items-center gap-3">
                     <div className="h-px flex-1 bg-slate-200" />
-                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-slate-400">or continue with email</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-slate-400">or</p>
                     <div className="h-px flex-1 bg-slate-200" />
                 </div>
 
@@ -278,7 +278,7 @@ function Login() {
                     </button>
                 </form>
 
-                <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
+                <div className="mt-6 flex flex-col items-center gap-2 text-center text-sm text-slate-500">
                     <p>
                         New to CodeRax?{" "}
                         <NavLink to="/signup" className="font-bold text-indigo-600 hover:text-indigo-500">

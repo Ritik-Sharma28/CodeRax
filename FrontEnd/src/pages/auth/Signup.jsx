@@ -116,7 +116,7 @@ function Signup() {
 
                             <div className="my-5 flex items-center gap-3">
                                 <div className="h-px flex-1 bg-slate-200" />
-                                <p className="text-xs font-bold uppercase tracking-[0.22em] text-slate-400">or continue with email</p>
+                                <p className="text-xs font-bold uppercase tracking-[0.22em] text-slate-400">or</p>
                                 <div className="h-px flex-1 bg-slate-200" />
                             </div>
 

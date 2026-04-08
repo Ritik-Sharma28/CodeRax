@@ -49,7 +49,7 @@ export default function GoogleAuthButton({ onCredential, disabled = false }) {
                 google.accounts.id.renderButton(containerRef.current, {
                     theme: "outline",
                     size: "large",
-                    width: 360,
+                    width: containerRef.current.offsetWidth || 300,
                     text: "continue_with",
                     shape: "pill",
                 });

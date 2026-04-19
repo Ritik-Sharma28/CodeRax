@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import matchService from '../../services/matchService';
 import problemService from '../../services/problemService';
 import submissionService from '../../services/submissionService';
-import { socket } from '../../services/socket.js';
+import { disconnectSocketSession, socket, syncSocketSession } from '../../services/socket.js';
 import LeftPanel from '../../components/problem/LeftPanel';
 import RightPanel from '../../components/problem/RightPanel';
 
@@ -21,7 +21,6 @@ const BattleArena = () => {
   // Problem state
   const [activeIndex, setActiveIndex] = useState(0);
   const [problems, setProblems] = useState([]);       // array of fetched problem objects
-  const [problemIds, setProblemIds] = useState([]);     // array of problem IDs from match
 
   // Editor state (per-problem)
   const [codeMap, setCodeMap] = useState({});         // Cache code: { "Q1_cpp": "...", "Q1_java": "..." }
@@ -60,16 +59,7 @@ const BattleArena = () => {
 
     let isMounted = true; // Async cleanup guard
 
-    socket.connect();
-    socket.emit('joinRoom', matchId);
-    socket.emit('authenticate', user._id);
-
-    // Reconnection strategy
-    const onConnect = () => {
-        socket.emit('authenticate', user._id);
-        socket.emit('joinRoom', matchId);
-    };
-    socket.on('connect', onConnect);
+    syncSocketSession({ userId: user._id, roomId: matchId });
 
     const initMatch = async () => {
       try {
@@ -86,12 +76,11 @@ const BattleArena = () => {
 
         // Auto-start ranked matches
         if (data.status === 'Waiting' && data.type === 'Ranked') {
-          socket.emit('startGame', matchId);
+          socket.emit('startGame', matchId, () => {});
         }
 
         // Load problems
         const ids = data.problems || [];
-        setProblemIds(ids);
 
         if (ids.length > 0) {
           const fetched = await Promise.all(
@@ -130,36 +119,67 @@ const BattleArena = () => {
     };
     initMatch();
 
-    socket.on('gameStarted', (data) => {
-      if (!isMounted) return;
-      setMatchData(prev => ({ ...prev, status: 'Ongoing' }));
-      
-      // Use match payload if provided, else use ref
-      const serverMatch = data?.match || {};
-      const duration = serverMatch.settings?.durationMinutes || matchSettingsRef.current?.durationMinutes || 60;
-      const endTime = serverMatch.endTime ? new Date(serverMatch.endTime).getTime() : Date.now() + (duration * 60 * 1000);
-      startTimer(endTime);
-    });
+    const handleRoomSnapshot = (data) => {
+      if (!isMounted || data?.match?.matchId !== matchId) return;
 
-    socket.on('leaderboardUpdate', (data) => {
+      const snapshotMatch = data.match;
+      setMatchData(snapshotMatch);
+      matchSettingsRef.current = snapshotMatch.settings;
+
+      if (snapshotMatch.status === 'Completed') {
+        if (timerRef.current) clearInterval(timerRef.current);
+        navigate(`/battle-results/${matchId}`);
+        return;
+      }
+
+      if (snapshotMatch.status === 'Ongoing') {
+        const duration = snapshotMatch.settings?.durationMinutes || matchSettingsRef.current?.durationMinutes || 60;
+        const endTime = snapshotMatch.endTime
+          ? new Date(snapshotMatch.endTime).getTime()
+          : Date.now() + (duration * 60 * 1000);
+        startTimer(endTime);
+      }
+    };
+
+    const handleGameStarted = (data) => {
+      if (!isMounted) return;
+      const serverMatch = data?.match || null;
+      if (serverMatch?.matchId === matchId) {
+        setMatchData(serverMatch);
+        matchSettingsRef.current = serverMatch.settings;
+      } else {
+        setMatchData(prev => prev ? { ...prev, status: 'Ongoing' } : prev);
+      }
+
+      const duration = serverMatch?.settings?.durationMinutes || matchSettingsRef.current?.durationMinutes || 60;
+      const endTime = serverMatch?.endTime ? new Date(serverMatch.endTime).getTime() : Date.now() + (duration * 60 * 1000);
+      startTimer(endTime);
+    };
+
+    const handleLeaderboardUpdate = (data) => {
       if (!isMounted) return;
       setMatchData(prev => prev ? { ...prev, participants: data.participants, leaderboard: data.leaderboard || prev.leaderboard } : prev);
-    });
+    };
 
-    socket.on('gameEnded', () => {
+    const handleGameEnded = () => {
       if (!isMounted) return;
       if (timerRef.current) clearInterval(timerRef.current);
       navigate(`/battle-results/${matchId}`);
-    });
+    };
+
+    socket.on('roomSnapshot', handleRoomSnapshot);
+    socket.on('gameStarted', handleGameStarted);
+    socket.on('leaderboardUpdate', handleLeaderboardUpdate);
+    socket.on('gameEnded', handleGameEnded);
 
     return () => {
       isMounted = false;
-      socket.off('connect', onConnect);
-      socket.off('gameStarted');
-      socket.off('leaderboardUpdate');
-      socket.off('gameEnded');
+      socket.off('roomSnapshot', handleRoomSnapshot);
+      socket.off('gameStarted', handleGameStarted);
+      socket.off('leaderboardUpdate', handleLeaderboardUpdate);
+      socket.off('gameEnded', handleGameEnded);
       if (timerRef.current) clearInterval(timerRef.current);
-      socket.disconnect();
+      disconnectSocketSession();
     };
   }, [matchId, user, navigate]);
 
@@ -220,7 +240,7 @@ const BattleArena = () => {
           setCodeMap(prev => ({ ...prev, [cacheKey]: initial }));
       }
     }
-  }, [selectedLanguage, activeIndex, problems]);
+  }, [selectedLanguage, activeIndex, problems, codeMap]);
 
   // Keep codeMap synced when user types
   useEffect(() => {
@@ -381,7 +401,7 @@ const BattleArena = () => {
 
   // ───── Main Battle UI ─────
   return (
-    <div className={`h-screen flex flex-col transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-white'}`}>
+    <div className={`h-screen w-full overflow-hidden flex flex-col transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-white'}`}>
 
       {/* ── Top Bar (replaces Navbar) ── */}
       <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2.5 sm:px-4 py-2 border-b flex-shrink-0
@@ -496,10 +516,10 @@ const BattleArena = () => {
       </div>
 
       {/* ── Main Split Content ── */}
-      <div className="flex-1 flex min-h-0 relative">
+      <div className="flex-1 flex min-h-0 min-w-0 w-full relative">
 
         {/* Left Panel: Problem Description */}
-        <div className={`flex flex-col border-r
+        <div className={`flex flex-col min-h-0 min-w-0 overflow-hidden border-r
           ${darkMode ? 'border-slate-700/60' : 'border-slate-200/60'}
           ${showLeaderboard ? 'w-full md:w-[35%]' : 'w-full md:w-1/2'}
           ${mobilePanel === 'description' ? 'flex' : 'hidden md:flex'}
@@ -521,7 +541,7 @@ const BattleArena = () => {
         </div>
 
         {/* Right Panel: Code Editor */}
-        <div className={`flex flex-col
+        <div className={`flex flex-col min-h-0 min-w-0 overflow-hidden
           ${showLeaderboard ? 'w-full md:w-[40%]' : 'w-full md:w-1/2'}
           ${mobilePanel === 'code' ? 'flex' : 'hidden md:flex'}
         `}>

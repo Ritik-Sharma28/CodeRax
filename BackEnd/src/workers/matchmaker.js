@@ -2,6 +2,7 @@ import { redisClient } from "../config/redis.js";
 import Match from "../models/match.js";
 import Problem from "../models/problem.js";
 import crypto from "crypto";
+import { parseQueueEntryValue, RANKED_QUEUE_KEY, setPendingMatch } from "../utils/rankedQueue.js";
 // Need `io` reference, we can export it from server or pass it to a init function.
 let io; 
 
@@ -16,7 +17,7 @@ export const initMatchmaker = (socketIo) => {
             }
 
             // Get all players in queue sorted by rating
-            const queue = await redisClient.zRangeWithScores("ranked_queue", 0, -1);
+            const queue = await redisClient.zRangeWithScores(RANKED_QUEUE_KEY, 0, -1);
             if (queue.length < 2) return;
 
             // Simple greedy matchmaking: check adjacent players
@@ -24,18 +25,11 @@ export const initMatchmaker = (socketIo) => {
                 const player1Str = queue[i].value;
                 const player2Str = queue[i+1].value;
                 
-                let p1Data, p2Data;
-                try {
-                    p1Data = JSON.parse(player1Str);
-                    p2Data = JSON.parse(player2Str);
-                } catch {
-                    // Fallback for old simple strings if they exist
-                    p1Data = { userId: player1Str };
-                    p2Data = { userId: player2Str };
-                }
+                const p1Data = parseQueueEntryValue(player1Str);
+                const p2Data = parseQueueEntryValue(player2Str);
 
                 // If difference is small enough (e.g. 200)
-                if (Math.abs(queue[i].score - queue[i+1].score) <= 200) {
+                if (p1Data?.userId && p2Data?.userId && Math.abs(queue[i].score - queue[i+1].score) <= 200) {
                     // Fetch 1 random problem
                     const randomProblems = await Problem.aggregate([{ $sample: { size: 1 } }]);
                     const selectedProblemId = randomProblems.length > 0 ? randomProblems[0]._id : null;
@@ -64,9 +58,13 @@ export const initMatchmaker = (socketIo) => {
                     });
                     
                     await newMatch.save();
+                    await Promise.all([
+                        setPendingMatch(redisClient, p1Data.userId, matchId),
+                        setPendingMatch(redisClient, p2Data.userId, matchId),
+                    ]);
 
                     // Remove them from queue using array syntax for v4
-                    await redisClient.zRem("ranked_queue", [player1Str, player2Str]);
+                    await redisClient.zRem(RANKED_QUEUE_KEY, [player1Str, player2Str]);
 
                     // Emit to their personal rooms
                     if (io) {

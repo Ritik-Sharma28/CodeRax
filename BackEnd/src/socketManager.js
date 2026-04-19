@@ -1,29 +1,106 @@
 import Match from './models/match.js';
 import { redisClient } from './config/redis.js';
 import { buildLeaderboard, completeMatch, shouldAutoCompleteMatch } from './utils/matchLifecycle.js';
+import { removeUserFromRankedQueue } from './utils/rankedQueue.js';
+
+const activeSocketsByUser = new Map();
+const disconnectCleanupTimers = new Map();
+const DISCONNECT_QUEUE_GRACE_MS = 15000;
+
+const trackAuthenticatedSocket = (userId, socketId) => {
+  const normalizedUserId = String(userId);
+  const existingTimer = disconnectCleanupTimers.get(normalizedUserId);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+    disconnectCleanupTimers.delete(normalizedUserId);
+  }
+
+  const socketIds = activeSocketsByUser.get(normalizedUserId) || new Set();
+  socketIds.add(socketId);
+  activeSocketsByUser.set(normalizedUserId, socketIds);
+};
+
+const untrackSocket = (userId, socketId) => {
+  const normalizedUserId = String(userId);
+  const socketIds = activeSocketsByUser.get(normalizedUserId);
+  if (!socketIds) return true;
+
+  socketIds.delete(socketId);
+  if (socketIds.size === 0) {
+    activeSocketsByUser.delete(normalizedUserId);
+    return true;
+  }
+
+  activeSocketsByUser.set(normalizedUserId, socketIds);
+  return false;
+};
 
 export const setupSocket = (io) => {
     io.on("connection", (socket) => {
       console.log("Client connected:", socket.id);
       
       socket.on("authenticate", (userId) => {
+          if (socket.userId && socket.userId.toString() !== userId.toString()) {
+            untrackSocket(socket.userId, socket.id);
+          }
           socket.userId = userId;
+          trackAuthenticatedSocket(userId, socket.id);
           socket.join(userId);
           console.log(`Socket ${socket.id} authenticated as ${userId}`);
       });
   
-      socket.on("joinRoom", (matchId) => {
+      socket.on("joinRoom", async (matchId) => {
         socket.join(matchId);
         console.log(`Socket ${socket.id} joined room ${matchId}`);
+
+        try {
+          const match = await Match.findOne({ matchId }).populate("participants.userId", "firstName lastName profilePicture rating rank");
+          if (match) {
+            const snapshot = {
+              match: {
+                ...match.toObject(),
+                leaderboard: buildLeaderboard(match),
+              },
+            };
+            // Broadcast to ALL sockets in the room (including host) so
+            // everyone's participant list stays in sync without polling.
+            io.to(matchId).emit("roomSnapshot", snapshot);
+          }
+        } catch (err) {
+          console.error("joinRoom Socket Error:", err);
+        }
       });
   
-      socket.on("startGame", async (matchId) => {
+      socket.on("startGame", async (matchId, callback) => {
           try {
-              if (!socket.userId) return; // Must be authenticated
+              if (!socket.userId) {
+                  callback?.({ ok: false, error: "User not authenticated" });
+                  return;
+              }
 
-              // Atomically start the game if not already ongoing, ensuring only one client triggers this
+              const existingMatch = await Match.findOne({ matchId }).populate("participants.userId", "firstName lastName profilePicture rating rank");
+              if (!existingMatch) {
+                  callback?.({ ok: false, error: "Match not found" });
+                  return;
+              }
+
+              if (existingMatch.hostId.toString() !== socket.userId.toString()) {
+                  callback?.({ ok: false, error: "Only the host can start this match" });
+                  return;
+              }
+
+              if (existingMatch.status !== "Waiting") {
+                  callback?.({ ok: false, error: "Match has already started" });
+                  return;
+              }
+
+              if ((existingMatch.participants?.length || 0) < 2) {
+                  callback?.({ ok: false, error: "At least 2 players are required to start" });
+                  return;
+              }
+
               const match = await Match.findOneAndUpdate(
-                  { matchId, status: { $ne: 'Ongoing' }, hostId: socket.userId },
+                  { matchId, status: 'Waiting', hostId: socket.userId, "participants.1": { $exists: true } },
                   { 
                       status: 'Ongoing', 
                       startTime: new Date() 
@@ -31,14 +108,21 @@ export const setupSocket = (io) => {
                   { new: true }
               ).populate("participants.userId", "firstName lastName profilePicture rating rank");
 
-              if (match) {
-                  const durationMs = (match.settings.durationMinutes || 60) * 60 * 1000;
-                  match.endTime = new Date(Date.now() + durationMs);
-                  await match.save();
-                  io.to(matchId).emit("gameStarted", { match });
+               if (match) {
+                   const durationMs = (match.settings.durationMinutes || 60) * 60 * 1000;
+                   match.endTime = new Date(Date.now() + durationMs);
+                   await match.save();
+                   io.to(matchId).emit("gameStarted", { match });
+                   io.to(matchId).emit("roomSnapshot", {
+                     match: {
+                       ...match.toObject(),
+                       leaderboard: buildLeaderboard(match),
+                     },
+                   });
+                   callback?.({ ok: true });
 
-                  setTimeout(async () => {
-                     const checkMatch = await Match.findOne({ matchId });
+                   setTimeout(async () => {
+                      const checkMatch = await Match.findOne({ matchId });
                      if (checkMatch && checkMatch.status === 'Ongoing') {
                          const completed = await completeMatch(matchId);
                          if (completed) {
@@ -46,12 +130,15 @@ export const setupSocket = (io) => {
                               participants: completed.participants,
                               leaderboard: buildLeaderboard(completed),
                             });
-                         }
-                     }
-                  }, durationMs);
-              }
+                           }
+                      }
+                   }, durationMs);
+                   return;
+               }
+               callback?.({ ok: false, error: "Failed to start match" });
           } catch (err) {
-              console.error("startGame Socket Error:", err);
+               console.error("startGame Socket Error:", err);
+               callback?.({ ok: false, error: "Failed to start match" });
           }
       });
 
@@ -146,12 +233,24 @@ export const setupSocket = (io) => {
   
       socket.on("disconnect", async () => {
         console.log("Client disconnected:", socket.id);
-        if (socket.userId && redisClient.isReady) {
-            try {
-                // Redis v4 array syntax for zRem
-                await redisClient.zRem("ranked_queue", [socket.userId.toString()]);
-            } catch (err) {
-                console.error("Redis queue cleanup error:", err);
+        if (socket.userId) {
+            const shouldScheduleCleanup = untrackSocket(socket.userId, socket.id);
+            if (shouldScheduleCleanup && redisClient.isReady) {
+                const normalizedUserId = String(socket.userId);
+                const cleanupTimer = setTimeout(async () => {
+                    disconnectCleanupTimers.delete(normalizedUserId);
+                    if (activeSocketsByUser.has(normalizedUserId) || !redisClient.isReady) {
+                        return;
+                    }
+
+                    try {
+                        await removeUserFromRankedQueue(redisClient, normalizedUserId);
+                    } catch (err) {
+                        console.error("Redis queue cleanup error:", err);
+                    }
+                }, DISCONNECT_QUEUE_GRACE_MS);
+
+                disconnectCleanupTimers.set(normalizedUserId, cleanupTimer);
             }
         }
       });

@@ -20,6 +20,10 @@ const matchService = {
         const response = await axiosClient.post('/api/match/queue', { rating });
         return response.data;
     },
+    getQueueStatus: async () => {
+        const response = await axiosClient.get('/api/match/queue-status');
+        return response.data;
+    },
     cancelQueue: async () => {
         const response = await axiosClient.post('/api/match/cancel-queue');
         return response.data;

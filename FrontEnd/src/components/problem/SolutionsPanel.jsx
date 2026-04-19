@@ -47,7 +47,7 @@ function SolutionsPanel({ problem, darkMode }) {
                     </div>
                     {/* Solution Code */}
                     <div className="p-4 overflow-x-auto">
-                        <pre className={`text-sm font-mono leading-relaxed ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>
+                        <pre className={`text-sm font-mono leading-relaxed whitespace-pre-wrap break-words ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>
                             <code>{solution.completeCode}</code>
                         </pre>
                     </div>

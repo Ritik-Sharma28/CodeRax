@@ -3,8 +3,8 @@ import Editor from '@monaco-editor/react';
 
 const LANGUAGES = [
     { key: 'cpp', label: 'C++' },
-    { key: 'java', label: 'Java' },
-    { key: 'python', label: 'Python' },
+    
+    
 ];
 
 function CodeEditor({ code, selectedLanguage, onCodeChange, onLanguageChange, darkMode, previewMode = false }) {

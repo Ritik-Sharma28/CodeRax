@@ -216,7 +216,7 @@ function RightPanel({
     const availableTabs = battleMode ? RIGHT_TABS.filter((tab) => tab.key !== 'notes') : RIGHT_TABS;
 
     return (
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0">
             <div className={`flex items-center gap-1 px-2 sm:px-3 py-2 border-b overflow-x-auto scrollbar-none
                 ${darkMode
                     ? 'bg-slate-900/60 border-slate-700/60'
@@ -251,7 +251,7 @@ function RightPanel({
                 ))}
             </div>
 
-            <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 flex flex-col min-h-0 overflow-x-hidden">
                 {activeRightTab === 'code' && (
                     <CodeEditor
                         code={code}

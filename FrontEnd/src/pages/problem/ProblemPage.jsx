@@ -11,9 +11,11 @@ import ErrorState from '../../components/ui/ErrorState';
 
 function ResizeHandle({ darkMode }) {
     return (
-        <Separator className="group relative hidden md:flex w-[6px] items-center justify-center">
+        <Separator className="group relative hidden md:flex w-2 items-center justify-center cursor-col-resize touch-none select-none">
+            {/* Invisible wider hit zone */}
+            <div className="absolute inset-y-0 -left-1 -right-1" />
             {/* Visible bar */}
-            <div className={`absolute inset-y-0 w-[6px] transition-colors duration-150 ${
+            <div className={`absolute inset-y-0 w-[6px] left-[1px] rounded-full transition-colors duration-150 ${
                 darkMode
                     ? 'bg-slate-800 group-hover:bg-indigo-500/40 group-active:bg-indigo-500/60'
                     : 'bg-slate-200 group-hover:bg-indigo-300/60 group-active:bg-indigo-400/70'
@@ -195,7 +197,7 @@ const ProblemPage = () => {
     }
 
     return (
-        <div className={`h-screen flex flex-col transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-white'}`}>
+        <div className={`h-screen w-full overflow-hidden flex flex-col transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-white'}`}>
             <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
 
             {/* Mobile tab switcher */}
@@ -223,7 +225,7 @@ const ProblemPage = () => {
             </div>
 
             {/* Desktop: resizable panels | Mobile: tab-based */}
-            <div className="flex-1 flex min-h-0">
+            <div className="flex-1 flex min-h-0 min-w-0 w-full">
                 {/* Mobile fallback — same tab layout as before */}
                 <div className={`flex flex-col w-full md:hidden ${mobilePanel === 'description' ? 'flex' : 'hidden'}`}>
                     <LeftPanel
@@ -256,10 +258,10 @@ const ProblemPage = () => {
                 </div>
 
                 {/* Desktop: resizable panel group */}
-                <div className="hidden md:flex flex-1 min-h-0">
+                <div className="hidden md:flex flex-1 min-h-0 min-w-0">
                     <Group direction="horizontal" autoSaveId="problem-panels">
                         <Panel defaultSize={45} minSize={25} order={1}>
-                            <div className={`flex flex-col h-full border-r ${darkMode ? 'border-slate-700/60' : 'border-slate-200/60'}`}>
+                            <div className={`flex flex-col h-full min-h-0 min-w-0 overflow-hidden border-r ${darkMode ? 'border-slate-700/60' : 'border-slate-200/60'}`}>
                                 <LeftPanel
                                     problem={problem}
                                     code={code}
@@ -271,7 +273,7 @@ const ProblemPage = () => {
                         </Panel>
                         <ResizeHandle darkMode={darkMode} />
                         <Panel defaultSize={55} minSize={25} order={2}>
-                            <div className="flex flex-col h-full">
+                            <div className="flex flex-col h-full min-h-0 min-w-0 overflow-hidden">
                                 <RightPanel
                                     code={code}
                                     selectedLanguage={selectedLanguage}

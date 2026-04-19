@@ -3,8 +3,20 @@ import Match from "../models/match.js";
 import Problem from "../models/problem.js";
 import { redisClient } from "../config/redis.js";
 import { buildLeaderboard, completeMatch, shouldAutoCompleteMatch } from "../utils/matchLifecycle.js";
+import {
+  buildQueueEntryValue,
+  clearPendingMatch,
+  findQueueEntryByUserId,
+  getPendingMatch,
+  removeUserFromRankedQueue,
+  RANKED_QUEUE_KEY,
+} from "../utils/rankedQueue.js";
 
 const generateMatchId = () => crypto.randomBytes(3).toString("hex").toUpperCase();
+const buildMatchPayload = (match) => ({
+  ...match.toObject(),
+  leaderboard: buildLeaderboard(match),
+});
 
 export const createMatch = async (req, res) => {
   try {
@@ -42,7 +54,7 @@ export const createMatch = async (req, res) => {
     await newMatch.save();
 
     const populatedMatch = await Match.findById(newMatch._id).populate("participants.userId", "firstName lastName profilePicture rating rank");
-    res.status(201).json(populatedMatch);
+    res.status(201).json(buildMatchPayload(populatedMatch));
   } catch (err) {
     console.error("Create Match Error:", err);
     res.status(500).json({ error: "Server error creating match" });
@@ -89,10 +101,13 @@ export const joinMatch = async (req, res) => {
 
       if (req.io) {
         req.io.to(matchId).emit("playerJoined", { participant, participants: match.participants });
+        req.io.to(matchId).emit("roomSnapshot", {
+          match: buildMatchPayload(match),
+        });
       }
     }
 
-    res.json(match);
+    res.json(buildMatchPayload(match));
   } catch (err) {
     console.error("Join Match Error:", err);
     res.status(500).json({ error: "Server error joining match" });
@@ -107,22 +122,13 @@ export const queueMatch = async (req, res) => {
     if (!redisClient.isReady) {
       return res.status(503).json({ error: "Matchmaking is temporarily unavailable. Please try again in a moment." });
     }
-    
-    // Clear any existing entry for this user first
-    const existingQueue = await redisClient.zRange("ranked_queue", 0, -1);
-    const existingStr = existingQueue.find(str => {
-        try {
-            const parsed = JSON.parse(str);
-            return parsed.userId === userId.toString();
-        } catch { return str === userId.toString(); }
-    });
-    
-    if (existingStr) {
-        await redisClient.zRem("ranked_queue", [existingStr]);
-    }
 
-    const payload = JSON.stringify({ userId: userId.toString(), timestamp: Date.now() });
-    await redisClient.zAdd("ranked_queue", [{ score: rating, value: payload }]);
+    await clearPendingMatch(redisClient, userId);
+    await removeUserFromRankedQueue(redisClient, userId);
+
+    const queueRating = Number(rating) || 1200;
+    const payload = buildQueueEntryValue({ userId, rating: queueRating });
+    await redisClient.zAdd(RANKED_QUEUE_KEY, [{ score: queueRating, value: payload }]);
     
     res.json({ message: "Successfully joined Ranked Queue", userId });
   } catch (err) {
@@ -139,22 +145,58 @@ export const cancelQueue = async (req, res) => {
             return res.status(200).json({ message: "Queue already unavailable" });
         }
 
-        const existingQueue = await redisClient.zRange("ranked_queue", 0, -1);
-        const existingStr = existingQueue.find(str => {
-            try {
-                const parsed = JSON.parse(str);
-                return parsed.userId === userId.toString();
-            } catch { return str === userId.toString(); }
-        });
-        
-        if (existingStr) {
-            await redisClient.zRem("ranked_queue", [existingStr]);
-        }
+        await removeUserFromRankedQueue(redisClient, userId);
+        await clearPendingMatch(redisClient, userId);
         res.json({ message: "Removed from queue" });
     } catch (err) {
         console.error("Cancel Queue Error:", err);
         res.status(500).json({ error: "Server error cancelling queue" });
     }
+};
+
+export const getQueueStatus = async (req, res) => {
+  try {
+    const userId = req.result._id;
+
+    if (!redisClient.isReady) {
+      return res.status(503).json({
+        queued: false,
+        matchId: null,
+        status: "unavailable",
+        error: "Matchmaking is temporarily unavailable.",
+      });
+    }
+
+    const pendingMatch = await getPendingMatch(redisClient, userId);
+    if (pendingMatch?.matchId) {
+      const existingMatch = await Match.findOne({
+        matchId: pendingMatch.matchId,
+        "participants.userId": userId,
+      }).select("_id status");
+
+      if (!existingMatch || existingMatch.status === "Completed" || existingMatch.status === "Abandoned") {
+        // Match doesn't exist or is already finished — clear the stale key
+        await clearPendingMatch(redisClient, userId);
+      } else {
+        return res.json({
+          queued: false,
+          matchId: pendingMatch.matchId,
+          status: "matched",
+        });
+      }
+    }
+
+    const queuedEntry = await findQueueEntryByUserId(redisClient, userId);
+
+    return res.json({
+      queued: Boolean(queuedEntry),
+      matchId: null,
+      status: queuedEntry ? "queued" : "idle",
+    });
+  } catch (err) {
+    console.error("Queue Status Error:", err);
+    return res.status(500).json({ error: "Server error fetching queue status" });
+  }
 };
 
 export const getMatch = async (req, res) => {
@@ -173,10 +215,7 @@ export const getMatch = async (req, res) => {
       }
     }
 
-    res.json({
-      ...match.toObject(),
-      leaderboard: buildLeaderboard(match),
-    });
+    res.json(buildMatchPayload(match));
   } catch (err) {
     console.error("Get Match Error:", err);
     res.status(500).json({ error: "Server error fetching match" });

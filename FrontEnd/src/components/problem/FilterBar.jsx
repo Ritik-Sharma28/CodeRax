@@ -51,9 +51,22 @@ function FilterBar({ search, setSearch, difficultyFilter, setDifficultyFilter, t
             >
                 <option value="all">All Tags</option>
                 <option value="array">Array</option>
+                <option value="string">String</option>
+                <option value="hashTable">Hash Table</option>
+                <option value="twoPointers">Two Pointers</option>
+                <option value="binarySearch">Binary Search</option>
                 <option value="linkedList">Linked List</option>
+                <option value="stack">Stack</option>
+                <option value="queue">Queue</option>
+                <option value="tree">Tree</option>
                 <option value="graph">Graph</option>
-                <option value="dp">DP</option>
+                <option value="bfs">BFS</option>
+                <option value="dfs">DFS</option>
+                <option value="dp">Dynamic Programming</option>
+                <option value="greedy">Greedy</option>
+                <option value="backtracking">Backtracking</option>
+                <option value="heap">Heap</option>
+                <option value="math">Math</option>
             </select>
 
             {/* Count */}

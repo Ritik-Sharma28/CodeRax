@@ -1,5 +1,6 @@
 import { redisClient } from "../config/redis.js";
 import Match from "../models/match.js";
+import mongoose from "mongoose";
 import Problem from "../models/problem.js";
 import crypto from "crypto";
 import { parseQueueEntryValue, RANKED_QUEUE_KEY, setPendingMatch } from "../utils/rankedQueue.js";
@@ -40,7 +41,7 @@ export const initMatchmaker = (socketIo) => {
                     const newMatch = new Match({
                         matchId,
                         type: 'Ranked',
-                        hostId: p1Data.userId, // Dummy host
+                        hostId: new mongoose.Types.ObjectId(p1Data.userId),
                         status: 'Waiting', 
                         settings: { maxPlayers: 2, durationMinutes: 25 },
                         problems: selectedProblemId ? [selectedProblemId] : [],
@@ -48,11 +49,15 @@ export const initMatchmaker = (socketIo) => {
                             {
                                 userId: p1Data.userId,
                                 status: 'Joined',
+                                totalScore: 0,
+                                totalTimeMinutes: 0,
                                 problemStats: selectedProblemId ? [{ problemId: selectedProblemId }] : []
                             },
                             {
                                 userId: p2Data.userId,
                                 status: 'Joined',
+                                totalScore: 0,
+                                totalTimeMinutes: 0,
                                 problemStats: selectedProblemId ? [{ problemId: selectedProblemId }] : []
                             }
                         ]

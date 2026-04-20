@@ -87,7 +87,7 @@ export const setupSocket = (io) => {
   
       socket.on("startGame", async ({ matchId, userId }, callback) => {
           try {
-              const actingUserId = socket.userId || userId;
+              const actingUserId = socket.userId;
               if (!actingUserId) {
                   callback?.({ ok: false, error: "User not authenticated" });
                   return;
@@ -110,23 +110,29 @@ export const setupSocket = (io) => {
 
       socket.on("forfeitMatch", async ({ matchId, userId }, callback) => {
           try {
-              const actingUserId = socket.userId || userId;
+              const actingUserId = socket.userId;
               if (!actingUserId) {
                   callback?.({ ok: false, error: "User not authenticated" });
                   return;
               }
 
-              const match = await Match.findOne({ matchId, status: 'Ongoing' }).populate("participants.userId", "firstName lastName profilePicture rating rank");
+              const match = await Match.findOneAndUpdate(
+                {
+                  matchId,
+                  status: 'Ongoing',
+                  "participants.userId": actingUserId,
+                  "participants.status": { $nin: ["Finished", "Forfeited"] }
+                },
+                {
+                  $set: {
+                    "participants.$.status": "Forfeited",
+                    "participants.$.finalSubmittedAt": new Date()
+                  }
+                },
+                { new: true }
+              ).populate("participants.userId", "firstName lastName profilePicture rating rank");
 
               if (match) {
-                  const participant = match.participants.find((p) => p.userId._id.toString() === actingUserId.toString());
-                  if (!participant) {
-                      callback?.({ ok: false, error: "Participant not found" });
-                      return;
-                  }
-                  participant.status = "Forfeited";
-                  participant.finalSubmittedAt = new Date();
-                  await match.save();
 
                   if (match.type === "Ranked" || shouldAutoCompleteMatch(match)) {
                     const completed = await completeMatch(matchId);
@@ -162,31 +168,32 @@ export const setupSocket = (io) => {
 
       socket.on("submitContest", async ({ matchId, userId }, callback) => {
           try {
-              const actingUserId = socket.userId || userId;
+              const actingUserId = socket.userId;
               if (!actingUserId) {
                   callback?.({ ok: false, error: "User not authenticated" });
                   return;
               }
 
-              const match = await Match.findOne({ matchId }).populate("participants.userId", "firstName lastName profilePicture rating rank");
+              const match = await Match.findOneAndUpdate(
+                {
+                  matchId,
+                  status: "Ongoing",
+                  "participants.userId": actingUserId,
+                  "participants.status": { $nin: ["Finished", "Forfeited"] }
+                },
+                {
+                  $set: {
+                    "participants.$.status": "Finished",
+                    "participants.$.finalSubmittedAt": new Date()
+                  }
+                },
+                { new: true }
+              ).populate("participants.userId", "firstName lastName profilePicture rating rank");
+              
               if (!match) {
-                  callback?.({ ok: false, error: "Match not found" });
+                  callback?.({ ok: false, error: "Match not found, inactive, or already submitted" });
                   return;
               }
-              if (match.status !== "Ongoing") {
-                  callback?.({ ok: false, error: "Battle is not active" });
-                  return;
-              }
-
-              const participant = match.participants.find((p) => p.userId._id.toString() === actingUserId.toString());
-              if (!participant) {
-                  callback?.({ ok: false, error: "You are not part of this battle" });
-                  return;
-              }
-
-              participant.status = "Finished";
-              participant.finalSubmittedAt = participant.finalSubmittedAt || new Date();
-              await match.save();
 
               if (shouldAutoCompleteMatch(match)) {
                   const completed = await completeMatch(matchId);

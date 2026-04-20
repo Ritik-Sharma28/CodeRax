@@ -23,7 +23,7 @@ const BattleArena = () => {
   const [problems, setProblems] = useState([]);       // array of fetched problem objects
 
   // Editor state (per-problem)
-  const [codeMap, setCodeMap] = useState({});         // Cache code: { "Q1_cpp": "...", "Q1_java": "..." }
+  const codeMapRef = useRef({});         // Cache code: { "Q1_cpp": "...", "Q1_java": "..." }
   const [code, setCode] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('cpp');
   const [loading, setLoading] = useState(false);
@@ -127,7 +127,7 @@ const BattleArena = () => {
             const startCode = fetched[0].startCode?.find(sc => sc.language === 'cpp');
             if (startCode) {
                setCode(startCode.initialCode);
-               setCodeMap(prev => ({ ...prev, [`0_cpp`]: startCode.initialCode }));
+               codeMapRef.current[`0_cpp`] = startCode.initialCode;
             }
             if (fetched[0].visibleTestCases) {
               setCustomTestcases(fetched[0].visibleTestCases.map(tc => ({ input: tc.input })));
@@ -212,6 +212,7 @@ const BattleArena = () => {
       socket.off('leaderboardUpdate', handleLeaderboardUpdate);
       socket.off('gameEnded', handleGameEnded);
       if (timerRef.current) clearInterval(timerRef.current);
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
       disconnectSocketSession();
     };
   }, [matchId, user, navigate]);
@@ -247,13 +248,13 @@ const BattleArena = () => {
     const prob = problems[index];
     if (prob) {
       const cacheKey = `${index}_${selectedLanguage}`;
-      if (codeMap[cacheKey]) {
-          setCode(codeMap[cacheKey]);
+      if (codeMapRef.current[cacheKey]) {
+          setCode(codeMapRef.current[cacheKey]);
       } else {
           const startCode = prob.startCode?.find(sc => sc.language === selectedLanguage);
           const initial = startCode?.initialCode || '';
           setCode(initial);
-          setCodeMap(prev => ({ ...prev, [cacheKey]: initial }));
+          codeMapRef.current[cacheKey] = initial;
       }
       setCustomTestcases(prob.visibleTestCases?.map(tc => ({ input: tc.input })) || []);
     }
@@ -264,23 +265,22 @@ const BattleArena = () => {
     const prob = problems[activeIndex];
     if (prob) {
       const cacheKey = `${activeIndex}_${selectedLanguage}`;
-      if (codeMap[cacheKey]) {
-          setCode(codeMap[cacheKey]);
+      if (codeMapRef.current[cacheKey]) {
+          setCode(codeMapRef.current[cacheKey]);
       } else {
           const startCode = prob.startCode?.find(sc => sc.language === selectedLanguage);
           const initial = startCode?.initialCode || '';
           setCode(initial);
-          setCodeMap(prev => ({ ...prev, [cacheKey]: initial }));
+          codeMapRef.current[cacheKey] = initial;
       }
     }
-  }, [selectedLanguage, activeIndex, problems, codeMap]);
+  }, [selectedLanguage, activeIndex, problems]);
 
-  // Keep codeMap synced when user types
-  useEffect(() => {
-     if (code) {
-         setCodeMap(prev => ({ ...prev, [`${activeIndex}_${selectedLanguage}`]: code }));
-     }
-  }, [code, selectedLanguage, activeIndex]);
+  // Handle direct typing natively without cascade effects
+  const handleCodeChange = (newCode) => {
+      setCode(newCode);
+      codeMapRef.current[`${activeIndex}_${selectedLanguage}`] = newCode;
+  };
 
   // ───── Submission Handlers ─────
   const handleRun = async () => {
@@ -600,7 +600,7 @@ const BattleArena = () => {
           <RightPanel
             code={code}
             selectedLanguage={selectedLanguage}
-            onCodeChange={setCode}
+            onCodeChange={handleCodeChange}
             onLanguageChange={setSelectedLanguage}
             onRun={handleRun}
             onSubmit={handleSubmitCode}

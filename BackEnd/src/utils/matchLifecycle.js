@@ -27,10 +27,6 @@ export const shouldAutoCompleteMatch = (match) => {
     participant.problemStats.every((problem) => problem.solved)
   );
 
-  const hasForfeited = participants.some((participant) => participant.status === "Forfeited");
-  if (participants.length <= 2 && hasForfeited) {
-      return true;
-  }
   const everyoneFinalSubmitted = participants.every(
     (participant) => participant.status === "Finished" || participant.status === "Forfeited"
   );
@@ -58,7 +54,9 @@ export const completeMatch = async (matchId) => {
   if (match.status === "Completed") return match;
 
   match.status = "Completed";
-  match.endTime = new Date();
+  if (!match.endTime) {
+      match.endTime = new Date();
+  }
   await match.save();
 
   // Clear pending_match Redis keys for ALL participants so they

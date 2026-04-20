@@ -117,7 +117,7 @@ export const joinMatch = async (req, res) => {
 export const queueMatch = async (req, res) => {
   try {
     const userId = req.result._id;
-    const { rating = 1200 } = req.body;
+    const rating = req.result.rating || 1200;
 
     if (!redisClient.isReady) {
       return res.status(503).json({ error: "Matchmaking is temporarily unavailable. Please try again in a moment." });
@@ -235,19 +235,23 @@ export const submitFinal = async (req, res) => {
     const { matchId } = req.params;
     const userId = req.result._id;
 
-    const match = await Match.findOne({ matchId }).populate(
-      "participants.userId",
-      "firstName lastName profilePicture rating rank"
-    );
-    if (!match) return res.status(404).json({ error: "Match not found" });
-    if (match.status !== "Ongoing") return res.status(400).json({ error: "Battle is not active" });
+    const match = await Match.findOneAndUpdate(
+      { 
+        matchId, 
+        status: "Ongoing",
+        "participants.userId": userId,
+        "participants.status": { $nin: ["Finished", "Forfeited"] }
+      },
+      { 
+        $set: { 
+          "participants.$.status": "Finished",
+          "participants.$.finalSubmittedAt": new Date()
+        } 
+      },
+      { new: true }
+    ).populate("participants.userId", "firstName lastName profilePicture rating rank");
 
-    const participant = match.participants.find((p) => p.userId._id.toString() === userId.toString());
-    if (!participant) return res.status(403).json({ error: "You are not part of this battle" });
-
-    participant.status = "Finished";
-    participant.finalSubmittedAt = participant.finalSubmittedAt || new Date();
-    await match.save();
+    if (!match) return res.status(404).json({ error: "Match not found, not active, or you have already submitted" });
 
     if (shouldAutoCompleteMatch(match)) {
       const completed = await completeMatch(matchId);
@@ -277,26 +281,25 @@ export const forfeitMatch = async (req, res) => {
     const { matchId } = req.params;
     const userId = req.result._id;
 
-    const match = await Match.findOne({ matchId, status: "Ongoing" }).populate(
-      "participants.userId",
-      "firstName lastName profilePicture rating rank"
-    );
+    const match = await Match.findOneAndUpdate(
+      { 
+        matchId, 
+        status: "Ongoing",
+        "participants.userId": userId,
+        "participants.status": { $nin: ["Finished", "Forfeited"] }
+      },
+      { 
+        $set: { 
+          "participants.$.status": "Forfeited",
+          "participants.$.finalSubmittedAt": new Date()
+        } 
+      },
+      { new: true }
+    ).populate("participants.userId", "firstName lastName profilePicture rating rank");
 
     if (!match) {
-      return res.status(404).json({ error: "Match not found or not active" });
+      return res.status(404).json({ error: "Match not found, not active, or you have already submitted/forfeited" });
     }
-
-    const participant = match.participants.find(
-      (p) => p.userId._id.toString() === userId.toString()
-    );
-
-    if (!participant) {
-      return res.status(403).json({ error: "You are not part of this battle" });
-    }
-
-    participant.status = "Forfeited";
-    participant.finalSubmittedAt = participant.finalSubmittedAt || new Date();
-    await match.save();
 
     if (match.type === "Ranked" || shouldAutoCompleteMatch(match)) {
       const completed = await completeMatch(matchId);

@@ -37,12 +37,20 @@ const BattleResults = () => {
 
   if (loading || !matchData) return <div className={`min-h-screen flex justify-center items-center ${darkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}><span className="loading loading-spinner text-indigo-500 loading-lg"></span></div>;
 
-  const sortedParticipants = [...matchData.participants].sort((a, b) => {
-    if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
-    return a.totalTimeMinutes - b.totalTimeMinutes;
-  });
-
   const getSolvedCount = (participant) => participant.problemStats?.filter((ps) => ps.solved).length || 0;
+
+  const sortedParticipants = matchData.leaderboard?.length > 0 
+    ? matchData.leaderboard 
+    : [...matchData.participants].sort((a, b) => {
+        if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+        const aSolved = getSolvedCount(a);
+        const bSolved = getSolvedCount(b);
+        if (aSolved !== bSolved) return bSolved - aSolved;
+        if (a.totalTimeMinutes !== b.totalTimeMinutes) return a.totalTimeMinutes - b.totalTimeMinutes;
+        const aTime = a.finalSubmittedAt ? new Date(a.finalSubmittedAt).getTime() : Infinity;
+        const bTime = b.finalSubmittedAt ? new Date(b.finalSubmittedAt).getTime() : Infinity;
+        return aTime - bTime;
+      });
 
   const getPodiumColor = (index) => {
     if (index === 0) return 'from-yellow-400 to-yellow-600 border-yellow-500 shadow-yellow-500/50';
@@ -72,7 +80,7 @@ const BattleResults = () => {
           const sizeClass = podiumIndex === 0 ? 'w-24 h-24' : 'w-20 h-20';
           
           return (
-              <div key={p.userId._id} className="flex flex-col items-center flex-1 z-10 hover:-translate-y-2 transition-transform duration-300">
+              <div key={p.userId?._id || p.userId || podiumIndex} className="flex flex-col items-center flex-1 z-10 hover:-translate-y-2 transition-transform duration-300">
                   <div className="relative mb-4">
                     {podiumIndex === 0 && <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-3xl">👑</span>}
                     <img src={p.userId.profilePicture || 'https://via.placeholder.com/100'} alt="avatar" className={`${sizeClass} rounded-full object-cover border-4 shadow-2xl relative z-20 ${darkMode ? 'border-slate-800' : 'border-white'}`} />

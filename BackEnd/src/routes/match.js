@@ -12,6 +12,6 @@ router.get("/queue-status", userMiddleware, getQueueStatus);
 router.post("/:matchId/submit-final", userMiddleware, submitFinal);
 router.post("/:matchId/forfeit", userMiddleware, forfeitMatch);
 router.post("/:matchId/finish", userMiddleware, finishMatch);
-router.get("/:matchId", getMatch);
+router.get("/:matchId", userMiddleware, getMatch);
 
 export const matchRouter = router;

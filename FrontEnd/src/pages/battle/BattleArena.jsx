@@ -66,6 +66,14 @@ const BattleArena = () => {
     const handleConnect = () => {
       // If socket auto-reconnects, re-auth and re-join room
       syncSocketSession({ userId: user._id, roomId: matchId });
+      
+      // Re-fetch match on reconnect to catch any missed gameEnded events
+      matchService.getMatch(matchId).then(data => {
+        if (!isMounted) return;
+        if (data.status === 'Completed') {
+          navigate(`/battle-results/${matchId}`);
+        }
+      }).catch(() => {});
     };
 
     socket.on('connect', handleConnect);

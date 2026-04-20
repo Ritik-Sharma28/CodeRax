@@ -327,7 +327,7 @@ const BattleLobby = () => {
 
     setError('');
     const ack = await new Promise((resolve) => {
-       socket.timeout(5000).emit('startGame', { matchId: matchData.matchId, userId: user._id }, (err, response) => {
+       socket.timeout(15000).emit('startGame', { matchId: matchData.matchId, userId: user._id }, (err, response) => {
          if (err) resolve({ ok: false, error: 'Connection timeout. Please try again.' });
          else resolve(response);
        });

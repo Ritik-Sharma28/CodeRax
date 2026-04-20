@@ -1,7 +1,7 @@
 import Match from './models/match.js';
 import { redisClient } from './config/redis.js';
 import { buildLeaderboard, completeMatch, shouldAutoCompleteMatch, startMatchHelper } from './utils/matchLifecycle.js';
-import { removeUserFromRankedQueue } from './utils/rankedQueue.js';
+import { removeUserFromRankedQueue, clearPendingMatch } from './utils/rankedQueue.js';
 
 const activeSocketsByUser = new Map();
 const disconnectCleanupTimers = new Map();
@@ -119,16 +119,22 @@ export const setupSocket = (io) => {
                       io.to(matchId).emit("gameEnded", {
                         participants: completed.participants,
                         leaderboard: buildLeaderboard(completed),
-                        forfeitedBy: socket.userId
+                        forfeitedBy: actingUserId
                       });
                     }
                   } else {
                     io.to(matchId).emit("leaderboardUpdate", {
                       participants: match.participants,
                       leaderboard: buildLeaderboard(match),
-                      forfeitedBy: socket.userId
+                      forfeitedBy: actingUserId
                     });
                   }
+
+                  // Explicitly clear this user's pending match key immediately
+                  if (redisClient?.isReady) {
+                    clearPendingMatch(redisClient, actingUserId).catch(() => {});
+                  }
+
                   callback?.({ ok: true });
                   return;
               }

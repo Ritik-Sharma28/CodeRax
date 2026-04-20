@@ -41,6 +41,7 @@ const BattleArena = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const timerRef = useRef(null);
   const pollTimerRef = useRef(null);
+  const isExitingRef = useRef(false);
   const matchSettingsRef = useRef(null); // Used to avoid stale closures in socket events
 
   // Mobile panel toggle
@@ -194,6 +195,7 @@ const BattleArena = () => {
 
     const handleGameEnded = () => {
       if (!isMounted) return;
+      if (isExitingRef.current) return; // User is forfeiting — don't fight with handleExit navigation
       if (timerRef.current) clearInterval(timerRef.current);
       navigate(`/battle-results/${matchId}`);
     };
@@ -338,6 +340,7 @@ const BattleArena = () => {
   // ───── Exit ─────
   const handleExit = async () => {
     if (!window.confirm('Are you sure you want to leave the battle? You will forfeit the match.')) return;
+    isExitingRef.current = true;
     try {
       await new Promise((resolve) => {
         socket.timeout(5000).emit('forfeitMatch', { matchId, userId: user._id }, (err, ack) => {
@@ -361,14 +364,13 @@ const BattleArena = () => {
       });
 
       if (socketResponse?.ok) {
-        setActionMessage(socketResponse.message || 'Contest submitted');
-        setTimeout(() => setActionMessage(''), 2000);
+        setActionMessage('✅ Contest submitted! Waiting for opponent to finish...');
         return;
       }
 
+      // Socket failed — try REST fallback
       await matchService.submitFinal(matchId);
-      setActionMessage('Contest submitted');
-      setTimeout(() => setActionMessage(''), 2000);
+      setActionMessage('✅ Contest submitted! Waiting for opponent to finish...');
     } catch (err) {
       setActionMessage(err?.response?.data?.error || 'Failed to submit contest');
       setTimeout(() => setActionMessage(''), 3000);

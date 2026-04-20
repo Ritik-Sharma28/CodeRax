@@ -1,4 +1,6 @@
 import Match from "../models/match.js";
+import { redisClient } from "../config/redis.js";
+import { clearPendingMatch } from "./rankedQueue.js";
 
 export const getSolvedCount = (participant) =>
   participant.problemStats.filter((p) => p.solved).length;
@@ -53,6 +55,20 @@ export const completeMatch = async (matchId) => {
   match.status = "Completed";
   match.endTime = new Date();
   await match.save();
+
+  // Clear pending_match Redis keys for ALL participants so they
+  // are never redirected back into a finished match.
+  if (redisClient?.isReady) {
+    for (const p of match.participants) {
+      const uid = p.userId?._id || p.userId;
+      if (uid) {
+        clearPendingMatch(redisClient, uid).catch((err) =>
+          console.error("clearPendingMatch error:", err)
+        );
+      }
+    }
+  }
+
   return match;
 };
 

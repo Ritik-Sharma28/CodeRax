@@ -26,6 +26,11 @@ export const shouldAutoCompleteMatch = (match) => {
   const everyoneSolvedAll = participants.every((participant) =>
     participant.problemStats.every((problem) => problem.solved)
   );
+
+  const hasForfeited = participants.some((participant) => participant.status === "Forfeited");
+  if (participants.length <= 2 && hasForfeited) {
+      return true;
+  }
   const everyoneFinalSubmitted = participants.every(
     (participant) => participant.status === "Finished" || participant.status === "Forfeited"
   );
@@ -99,7 +104,8 @@ export const startMatchHelper = async (matchId, io, hostId = null) => {
   await match.save();
 
   if (io) {
-      io.to(matchId).emit("gameStarted", { match });
+      const parsedMatch = match.toObject ? match.toObject() : match;
+      io.to(matchId).emit("gameStarted", { match: parsedMatch });
       io.to(matchId).emit("roomSnapshot", {
         match: {
           ...match.toObject(),

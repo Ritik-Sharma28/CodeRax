@@ -350,8 +350,12 @@ const BattleArena = () => {
       if (!socketResponse?.ok) {
         await matchService.forfeitMatch(matchId);
       }
-    } finally {
+      
+      // Navigate only if the server successfully registers the forfeit
       navigate(`/battle-results/${matchId}`);
+    } catch (err) {
+       console.error("Forfeit failed:", err);
+       alert("Failed to leave battle properly. Please check your connection and try again.");
     }
   };
 

@@ -32,6 +32,10 @@ const matchService = {
         const response = await axiosClient.post(`/api/match/${matchId}/submit-final`);
         return response.data;
     },
+    forfeitMatch: async (matchId) => {
+        const response = await axiosClient.post(`/api/match/${matchId}/forfeit`);
+        return response.data;
+    },
     finishMatch: async (matchId) => {
         const response = await axiosClient.post(`/api/match/${matchId}/finish`);
         return response.data;

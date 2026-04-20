@@ -50,7 +50,12 @@ export const setupSocket = (io) => {
       });
   
       socket.on("joinRoom", async (matchId) => {
+        if (socket.currentRoomId && socket.currentRoomId !== matchId) {
+          socket.leave(socket.currentRoomId);
+        }
+
         socket.join(matchId);
+        socket.currentRoomId = matchId;
         console.log(`Socket ${socket.id} joined room ${matchId}`);
 
         try {
@@ -68,6 +73,15 @@ export const setupSocket = (io) => {
           }
         } catch (err) {
           console.error("joinRoom Socket Error:", err);
+        }
+      });
+
+      socket.on("leaveRoom", (matchId) => {
+        if (!matchId) return;
+
+        socket.leave(matchId);
+        if (socket.currentRoomId === matchId) {
+          socket.currentRoomId = null;
         }
       });
   

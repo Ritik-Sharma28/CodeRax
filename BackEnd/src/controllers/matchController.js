@@ -172,17 +172,25 @@ export const getQueueStatus = async (req, res) => {
       const existingMatch = await Match.findOne({
         matchId: pendingMatch.matchId,
         "participants.userId": userId,
-      }).select("_id status");
+      }).select("_id status participants");
 
       if (!existingMatch || existingMatch.status === "Completed" || existingMatch.status === "Abandoned") {
         // Match doesn't exist or is already finished — clear the stale key
         await clearPendingMatch(redisClient, userId);
       } else {
+        const pendingParticipant = existingMatch.participants.find(
+          (participant) => participant.userId.toString() === userId.toString()
+        );
+
+        if (pendingParticipant?.status === "Forfeited") {
+          await clearPendingMatch(redisClient, userId);
+        } else {
         return res.json({
           queued: false,
           matchId: pendingMatch.matchId,
           status: "matched",
         });
+        }
       }
     }
 
@@ -261,6 +269,60 @@ export const submitFinal = async (req, res) => {
   } catch (err) {
     console.error("Submit Final Error:", err);
     return res.status(500).json({ error: "Server error submitting final battle" });
+  }
+};
+
+export const forfeitMatch = async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const userId = req.result._id;
+
+    const match = await Match.findOne({ matchId, status: "Ongoing" }).populate(
+      "participants.userId",
+      "firstName lastName profilePicture rating rank"
+    );
+
+    if (!match) {
+      return res.status(404).json({ error: "Match not found or not active" });
+    }
+
+    const participant = match.participants.find(
+      (p) => p.userId._id.toString() === userId.toString()
+    );
+
+    if (!participant) {
+      return res.status(403).json({ error: "You are not part of this battle" });
+    }
+
+    participant.status = "Forfeited";
+    participant.finalSubmittedAt = participant.finalSubmittedAt || new Date();
+    await match.save();
+
+    if (match.type === "Ranked" || shouldAutoCompleteMatch(match)) {
+      const completed = await completeMatch(matchId);
+      if (completed) {
+        req.io?.to(matchId).emit("gameEnded", {
+          participants: completed.participants,
+          leaderboard: buildLeaderboard(completed),
+          forfeitedBy: userId,
+        });
+      }
+    } else {
+      req.io?.to(matchId).emit("leaderboardUpdate", {
+        participants: match.participants,
+        leaderboard: buildLeaderboard(match),
+        forfeitedBy: userId,
+      });
+    }
+
+    if (redisClient?.isReady) {
+      await clearPendingMatch(redisClient, userId);
+    }
+
+    return res.json({ message: "Match forfeited successfully" });
+  } catch (err) {
+    console.error("Forfeit Match Error:", err);
+    return res.status(500).json({ error: "Server error forfeiting match" });
   }
 };
 

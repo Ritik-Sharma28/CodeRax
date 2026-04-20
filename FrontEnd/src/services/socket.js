@@ -15,6 +15,7 @@ export const socket = io(SOCKET_URL, {
 
 let desiredUserId = null;
 let desiredRoomId = null;
+let joinedRoomId = null;
 
 // Track what was last sent to avoid duplicate emits
 let lastSentUserId = null;
@@ -33,14 +34,21 @@ const syncDesiredSocketState = (force = false) => {
     lastSentUserId = desiredUserId;
   }
 
+  if (joinedRoomId && joinedRoomId !== desiredRoomId) {
+    socket.emit('leaveRoom', joinedRoomId);
+    joinedRoomId = null;
+  }
+
   if (desiredRoomId && (force || desiredRoomId !== lastSentRoomId)) {
     socket.emit('joinRoom', desiredRoomId);
     lastSentRoomId = desiredRoomId;
+    joinedRoomId = desiredRoomId;
   }
 
   // If room was cleared, reset tracking so re-joining the same room later works
   if (!desiredRoomId) {
     lastSentRoomId = null;
+    joinedRoomId = null;
   }
 };
 
@@ -114,6 +122,7 @@ export const disconnectSocketSession = () => {
     desiredRoomId = null;
     lastSentUserId = null;
     lastSentRoomId = null;
+    joinedRoomId = null;
 
     if (socket.connected) {
       socket.disconnect();

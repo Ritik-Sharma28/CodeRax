@@ -342,12 +342,16 @@ const BattleArena = () => {
     if (!window.confirm('Are you sure you want to leave the battle? You will forfeit the match.')) return;
     isExitingRef.current = true;
     try {
-      await new Promise((resolve) => {
+      const socketResponse = await new Promise((resolve) => {
         socket.timeout(5000).emit('forfeitMatch', { matchId, userId: user._id }, (err, ack) => {
           if (err) resolve({ ok: false, error: 'timeout' });
           else resolve(ack);
         });
       });
+
+      if (!socketResponse?.ok) {
+        await matchService.forfeitMatch(matchId);
+      }
     } finally {
       navigate('/battle-lobby');
     }

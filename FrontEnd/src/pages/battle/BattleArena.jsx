@@ -40,6 +40,7 @@ const BattleArena = () => {
   // Timer
   const [timeLeft, setTimeLeft] = useState(0);
   const timerRef = useRef(null);
+  const pollTimerRef = useRef(null);
   const matchSettingsRef = useRef(null); // Used to avoid stale closures in socket events
 
   // Mobile panel toggle
@@ -81,9 +82,32 @@ const BattleArena = () => {
           return;
         }
 
-        // Auto-start ranked matches
-        if (data.status === 'Waiting' && data.type === 'Ranked') {
-          socket.emit('startGame', matchId, () => {});
+        // Setup polling if stuck in Waiting state (recovery for missed WS events)
+        if (data.status === 'Waiting') {
+           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+           pollTimerRef.current = setInterval(async () => {
+             try {
+                if (!isMounted) return;
+                const pollData = await matchService.getMatch(matchId);
+                if (pollData && pollData.status !== 'Waiting') {
+                  if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+                  setMatchData(pollData);
+                  matchSettingsRef.current = pollData.settings;
+                  
+                  if (pollData.status === 'Completed') {
+                     navigate(`/battle-results/${matchId}`);
+                     return;
+                  }
+                  
+                  if (pollData.status === 'Ongoing' && pollData.settings?.durationMinutes) {
+                     const endT = pollData.endTime ? new Date(pollData.endTime).getTime() : new Date().getTime() + (pollData.settings.durationMinutes * 60 * 1000);
+                     startTimer(endT);
+                  }
+                }
+             } catch (err) {
+                // Ignore transient network errors during polling
+             }
+           }, 3000);
         }
 
         // Load problems
@@ -385,7 +409,13 @@ const BattleArena = () => {
     return (
       <div className={`h-screen flex flex-col items-center justify-center ${darkMode ? 'bg-slate-950 text-white' : 'bg-white text-slate-900'}`}>
         <div className={`w-12 h-12 border-3 border-t-purple-500 rounded-full animate-spin mb-4 ${darkMode ? 'border-slate-700' : 'border-slate-200'}`} />
-        <h2 className="text-xl font-bold mb-2">Waiting for host to start...</h2>
+        <h2 className="text-xl font-bold mb-2">
+          {(matchData?.participants?.length || 0) < 2
+            ? "Waiting for players..."
+            : matchData?.type === 'Ranked'
+              ? "Starting battle..."
+              : "Waiting for host to start..."}
+        </h2>
         <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Room: {matchId}</p>
       </div>
     );

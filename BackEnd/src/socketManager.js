@@ -1,6 +1,6 @@
 import Match from './models/match.js';
 import { redisClient } from './config/redis.js';
-import { buildLeaderboard, completeMatch, shouldAutoCompleteMatch } from './utils/matchLifecycle.js';
+import { buildLeaderboard, completeMatch, shouldAutoCompleteMatch, startMatchHelper } from './utils/matchLifecycle.js';
 import { removeUserFromRankedQueue } from './utils/rankedQueue.js';
 
 const activeSocketsByUser = new Map();
@@ -78,75 +78,15 @@ export const setupSocket = (io) => {
                   return;
               }
 
-              const existingMatch = await Match.findOne({ matchId }).populate("participants.userId", "firstName lastName profilePicture rating rank");
-              if (!existingMatch) {
-                  callback?.({ ok: false, error: "Match not found" });
+              const result = await startMatchHelper(matchId, io, socket.userId);
+              
+              if (result.error) {
+                  callback?.({ ok: false, error: result.error });
                   return;
               }
 
-              const isParticipant = existingMatch.participants.some(p => p.userId._id.toString() === socket.userId.toString() || p.userId.toString() === socket.userId.toString());
-              if (!isParticipant) {
-                  callback?.({ ok: false, error: "You are not a participant in this match" });
-                  return;
-              }
+              callback?.({ ok: true });
 
-              if (existingMatch.type !== "Ranked" && existingMatch.hostId.toString() !== socket.userId.toString()) {
-                  callback?.({ ok: false, error: "Only the host can start this match" });
-                  return;
-              }
-
-              if (existingMatch.status !== "Waiting") {
-                  callback?.({ ok: false, error: "Match has already started" });
-                  return;
-              }
-
-              if ((existingMatch.participants?.length || 0) < 2) {
-                  callback?.({ ok: false, error: "At least 2 players are required to start" });
-                  return;
-              }
-
-              const query = { matchId, status: 'Waiting', "participants.1": { $exists: true } };
-              if (existingMatch.type !== "Ranked") {
-                  query.hostId = socket.userId;
-              }
-
-              const match = await Match.findOneAndUpdate(
-                  query,
-                  { 
-                      status: 'Ongoing', 
-                      startTime: new Date() 
-                  },
-                  { new: true }
-              ).populate("participants.userId", "firstName lastName profilePicture rating rank");
-
-               if (match) {
-                   const durationMs = (match.settings.durationMinutes || 60) * 60 * 1000;
-                   match.endTime = new Date(Date.now() + durationMs);
-                   await match.save();
-                   io.to(matchId).emit("gameStarted", { match });
-                   io.to(matchId).emit("roomSnapshot", {
-                     match: {
-                       ...match.toObject(),
-                       leaderboard: buildLeaderboard(match),
-                     },
-                   });
-                   callback?.({ ok: true });
-
-                   setTimeout(async () => {
-                      const checkMatch = await Match.findOne({ matchId });
-                     if (checkMatch && checkMatch.status === 'Ongoing') {
-                         const completed = await completeMatch(matchId);
-                         if (completed) {
-                            io.to(matchId).emit("gameEnded", {
-                              participants: completed.participants,
-                              leaderboard: buildLeaderboard(completed),
-                            });
-                           }
-                      }
-                   }, durationMs);
-                   return;
-               }
-               callback?.({ ok: false, error: "Failed to start match" });
           } catch (err) {
                console.error("startGame Socket Error:", err);
                callback?.({ ok: false, error: "Failed to start match" });

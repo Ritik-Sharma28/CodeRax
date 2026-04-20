@@ -3,6 +3,7 @@ import Match from "../models/match.js";
 import Problem from "../models/problem.js";
 import crypto from "crypto";
 import { parseQueueEntryValue, RANKED_QUEUE_KEY, setPendingMatch } from "../utils/rankedQueue.js";
+import { startMatchHelper } from "../utils/matchLifecycle.js";
 // Need `io` reference, we can export it from server or pass it to a init function.
 let io; 
 
@@ -62,6 +63,9 @@ export const initMatchmaker = (socketIo) => {
                         setPendingMatch(redisClient, p1Data.userId, matchId),
                         setPendingMatch(redisClient, p2Data.userId, matchId),
                     ]);
+
+                    // Automatically transition to Ongoing
+                    await startMatchHelper(matchId, io);
 
                     // Remove them from queue using array syntax for v4
                     await redisClient.zRem(RANKED_QUEUE_KEY, [player1Str, player2Str]);

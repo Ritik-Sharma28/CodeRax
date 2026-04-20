@@ -55,3 +55,55 @@ export const completeMatch = async (matchId) => {
   await match.save();
   return match;
 };
+
+export const startMatchHelper = async (matchId, io, hostId = null) => {
+  const existingMatch = await Match.findOne({ matchId }).populate("participants.userId", "firstName lastName profilePicture rating rank");
+  if (!existingMatch) return { error: "Match not found" };
+  if (existingMatch.status !== "Waiting") return { error: "Match has already started" };
+  if ((existingMatch.participants?.length || 0) < 2) return { error: "At least 2 players are required to start" };
+
+  const query = { matchId, status: 'Waiting', "participants.1": { $exists: true } };
+  if (hostId && existingMatch.type !== "Ranked") {
+      query.hostId = hostId;
+  }
+
+  const match = await Match.findOneAndUpdate(
+      query,
+      { 
+          status: 'Ongoing', 
+          startTime: new Date() 
+      },
+      { new: true }
+  ).populate("participants.userId", "firstName lastName profilePicture rating rank");
+
+  if (!match) return { error: "Failed to start or unauthorized" };
+
+  const durationMs = (match.settings.durationMinutes || 60) * 60 * 1000;
+  match.endTime = new Date(Date.now() + durationMs);
+  await match.save();
+
+  if (io) {
+      io.to(matchId).emit("gameStarted", { match });
+      io.to(matchId).emit("roomSnapshot", {
+        match: {
+          ...match.toObject(),
+          leaderboard: buildLeaderboard(match),
+        },
+      });
+  }
+
+  setTimeout(async () => {
+     const checkMatch = await Match.findOne({ matchId });
+     if (checkMatch && checkMatch.status === 'Ongoing') {
+         const completed = await completeMatch(matchId);
+         if (completed && io) {
+            io.to(matchId).emit("gameEnded", {
+              participants: completed.participants,
+              leaderboard: buildLeaderboard(completed),
+            });
+         }
+     }
+  }, durationMs);
+
+  return { ok: true, match };
+};

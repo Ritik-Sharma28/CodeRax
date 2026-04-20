@@ -61,6 +61,13 @@ const BattleArena = () => {
 
     syncSocketSession({ userId: user._id, roomId: matchId });
 
+    const handleConnect = () => {
+      // If socket auto-reconnects, re-auth and re-join room
+      syncSocketSession({ userId: user._id, roomId: matchId });
+    };
+
+    socket.on('connect', handleConnect);
+
     const initMatch = async () => {
       try {
         const data = await matchService.getMatch(matchId);
@@ -174,6 +181,7 @@ const BattleArena = () => {
 
     return () => {
       isMounted = false;
+      socket.off('connect', handleConnect);
       socket.off('roomSnapshot', handleRoomSnapshot);
       socket.off('gameStarted', handleGameStarted);
       socket.off('leaderboardUpdate', handleLeaderboardUpdate);

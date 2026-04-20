@@ -84,7 +84,13 @@ export const setupSocket = (io) => {
                   return;
               }
 
-              if (existingMatch.hostId.toString() !== socket.userId.toString()) {
+              const isParticipant = existingMatch.participants.some(p => p.userId._id.toString() === socket.userId.toString() || p.userId.toString() === socket.userId.toString());
+              if (!isParticipant) {
+                  callback?.({ ok: false, error: "You are not a participant in this match" });
+                  return;
+              }
+
+              if (existingMatch.type !== "Ranked" && existingMatch.hostId.toString() !== socket.userId.toString()) {
                   callback?.({ ok: false, error: "Only the host can start this match" });
                   return;
               }
@@ -99,8 +105,13 @@ export const setupSocket = (io) => {
                   return;
               }
 
+              const query = { matchId, status: 'Waiting', "participants.1": { $exists: true } };
+              if (existingMatch.type !== "Ranked") {
+                  query.hostId = socket.userId;
+              }
+
               const match = await Match.findOneAndUpdate(
-                  { matchId, status: 'Waiting', hostId: socket.userId, "participants.1": { $exists: true } },
+                  query,
                   { 
                       status: 'Ongoing', 
                       startTime: new Date() 
@@ -142,15 +153,22 @@ export const setupSocket = (io) => {
           }
       });
 
-      socket.on("forfeitMatch", async ({ matchId }, callback) => {
+      socket.on("forfeitMatch", async ({ matchId, userId }, callback) => {
           try {
-              if (!socket.userId) return;
+              const actingUserId = socket.userId || userId;
+              if (!actingUserId) {
+                  callback?.({ ok: false, error: "User not authenticated" });
+                  return;
+              }
 
               const match = await Match.findOne({ matchId, status: 'Ongoing' }).populate("participants.userId", "firstName lastName profilePicture rating rank");
 
               if (match) {
-                  const participant = match.participants.find((p) => p.userId._id.toString() === socket.userId.toString());
-                  if (!participant) return;
+                  const participant = match.participants.find((p) => p.userId._id.toString() === actingUserId.toString());
+                  if (!participant) {
+                      callback?.({ ok: false, error: "Participant not found" });
+                      return;
+                  }
                   participant.status = "Forfeited";
                   participant.finalSubmittedAt = new Date();
                   await match.save();

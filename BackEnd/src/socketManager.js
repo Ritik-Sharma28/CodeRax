@@ -139,9 +139,10 @@ export const setupSocket = (io) => {
           }
       });
 
-      socket.on("submitContest", async ({ matchId }, callback) => {
+      socket.on("submitContest", async ({ matchId, userId }, callback) => {
           try {
-              if (!socket.userId) {
+              const actingUserId = socket.userId || userId;
+              if (!actingUserId) {
                   callback?.({ ok: false, error: "User not authenticated" });
                   return;
               }
@@ -156,7 +157,7 @@ export const setupSocket = (io) => {
                   return;
               }
 
-              const participant = match.participants.find((p) => p.userId._id.toString() === socket.userId.toString());
+              const participant = match.participants.find((p) => p.userId._id.toString() === actingUserId.toString());
               if (!participant) {
                   callback?.({ ok: false, error: "You are not part of this battle" });
                   return;

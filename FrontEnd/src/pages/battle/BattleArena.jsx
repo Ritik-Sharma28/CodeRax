@@ -340,7 +340,10 @@ const BattleArena = () => {
     if (!window.confirm('Are you sure you want to leave the battle? You will forfeit the match.')) return;
     try {
       await new Promise((resolve) => {
-        socket.emit('forfeitMatch', { matchId, userId: user._id }, () => resolve());
+        socket.timeout(5000).emit('forfeitMatch', { matchId, userId: user._id }, (err, ack) => {
+          if (err) resolve({ ok: false, error: 'timeout' });
+          else resolve(ack);
+        });
       });
     } finally {
       navigate('/battle-lobby');
@@ -351,7 +354,10 @@ const BattleArena = () => {
     try {
       setFinalizing(true);
       const socketResponse = await new Promise((resolve) => {
-        socket.emit('submitContest', { matchId }, (ack) => resolve(ack));
+        socket.timeout(5000).emit('submitContest', { matchId, userId: user._id }, (err, ack) => {
+          if (err) resolve({ ok: false, error: 'timeout' });
+          else resolve(ack);
+        });
       });
 
       if (socketResponse?.ok) {

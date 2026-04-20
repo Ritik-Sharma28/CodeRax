@@ -195,7 +195,6 @@ const BattleArena = () => {
 
     const handleGameEnded = () => {
       if (!isMounted) return;
-      if (isExitingRef.current) return; // User is forfeiting — don't fight with handleExit navigation
       if (timerRef.current) clearInterval(timerRef.current);
       navigate(`/battle-results/${matchId}`);
     };
@@ -340,7 +339,6 @@ const BattleArena = () => {
   // ───── Exit ─────
   const handleExit = async () => {
     if (!window.confirm('Are you sure you want to leave the battle? You will forfeit the match.')) return;
-    isExitingRef.current = true;
     try {
       const socketResponse = await new Promise((resolve) => {
         socket.timeout(5000).emit('forfeitMatch', { matchId, userId: user._id }, (err, ack) => {
@@ -353,7 +351,7 @@ const BattleArena = () => {
         await matchService.forfeitMatch(matchId);
       }
     } finally {
-      navigate('/battle-lobby');
+      navigate(`/battle-results/${matchId}`);
     }
   };
 

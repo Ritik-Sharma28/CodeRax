@@ -322,15 +322,20 @@ const BattleLobby = () => {
     }
   };
 
-  const startGame = () => {
-    if (!matchData) return;
+  const startGame = async () => {
+    if (!matchData || !user) return;
 
     setError('');
-    socket.emit('startGame', matchData.matchId, (ack) => {
-      if (!ack?.ok) {
-        setError(ack?.error || 'Failed to start match');
-      }
+    const ack = await new Promise((resolve) => {
+       socket.timeout(5000).emit('startGame', { matchId: matchData.matchId, userId: user._id }, (err, response) => {
+         if (err) resolve({ ok: false, error: 'Connection timeout. Please try again.' });
+         else resolve(response);
+       });
     });
+
+    if (!ack?.ok) {
+      setError(ack?.error || 'Failed to start match');
+    }
   };
 
   // ── RENDER: Waiting Room ──

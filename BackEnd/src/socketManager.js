@@ -85,14 +85,15 @@ export const setupSocket = (io) => {
         }
       });
   
-      socket.on("startGame", async (matchId, callback) => {
+      socket.on("startGame", async ({ matchId, userId }, callback) => {
           try {
-              if (!socket.userId) {
+              const actingUserId = socket.userId || userId;
+              if (!actingUserId) {
                   callback?.({ ok: false, error: "User not authenticated" });
                   return;
               }
 
-              const result = await startMatchHelper(matchId, io, socket.userId);
+              const result = await startMatchHelper(matchId, io, actingUserId);
               
               if (result.error) {
                   callback?.({ ok: false, error: result.error });

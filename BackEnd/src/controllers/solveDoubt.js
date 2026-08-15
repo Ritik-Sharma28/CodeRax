@@ -3,7 +3,7 @@ import { Submission } from '../models/submission.js'; // 👈 IMPORTED SUBMISSIO
 import { callGroq } from '../utils/groqHelper.js';
 
 const CONFIG = {
-    model: 'llama-3.3-70b-versatile',   
+    model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',   
     maxTokens: 1024,                      
     temperature: 0.7,
     maxHistoryMessages: 10,              

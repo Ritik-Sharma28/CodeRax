@@ -21,7 +21,7 @@ const SIMULATE_RATE_LIMIT = false;
  * 
  * @param {Array<{role: string, content: string}>} messages - OpenAI-format messages
  * @param {object} opts
- * @param {string}  [opts.model='llama-3.3-70b-versatile']
+ * @param {string}  [opts.model=process.env.GROQ_MODEL || 'llama-3.1-8b-instant']
  * @param {number}  [opts.maxTokens=1024]
  * @param {number}  [opts.temperature=0.7]
  * @returns {Promise<string>} - The assistant's reply text
@@ -29,7 +29,7 @@ const SIMULATE_RATE_LIMIT = false;
  */
 export async function callGroq(messages, opts = {}) {
     const {
-        model = 'llama-3.3-70b-versatile',
+        model = process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
         maxTokens = 1024,
         temperature = 0.7,
     } = opts;
